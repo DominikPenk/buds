@@ -205,36 +205,55 @@ def _map_kwargs(
 @overload
 def system(
     *tags: str,
-) -> Callable[[Callable[P, R]], Callable[Concatenate[World, ...], None]]:
-    """Decorator form when used with tags."""
+) -> Callable[[Callable[P, R]], Callable[Concatenate[World, ...], None]]: ...
 
 
 @overload
 def system(
     func: Callable[P, None],
-) -> Callable[[Callable[P, R]], Callable[Concatenate[World, ...], None]]:
-    """Decorator form when used directly on a function."""
+) -> Callable[[Callable[P, R]], Callable[Concatenate[World, ...], None]]: ...
 
 
-def system(*args):
-    """Decorator that defines an ECS system — a function operating on entities and traits.
+def system(
+    *args: Any,
+) -> Callable[[Callable[P, None]], Callable[Concatenate[World, P], None]] | Callable:
+    """Decorator that defines an ECS system—a function operating on entities and traits.
 
     The `@system` decorator automatically iterates over all entities that match
     the function’s type-hinted traits and optional tags, calling the function for each.
+    It is used for side-effect systems (e.g., movement, physics) that do not
+    return a value per entity.
 
-    Example:
+    The decorated function's signature must include a [`World`][buds.base.World]
+    instance as its first argument (or the second if it is a method).
+
+    Example (Direct Use):
         ```python
         @system
-        def move(e: Entity, pos: Position, vel: Velocity):
+        def move(world: World, pos: Position, vel: Velocity):
+            # world is required here
             pos.x += vel.dx
-            pos.y += vel.dy
+            # ...
+        ```
+    Example (With Tags):
+        ```python
+        @system("active", "renderable")
+        def render_system(world: World, e: Entity, mesh: Mesh):
+            # Only runs for entities with "active" AND "renderable" tags
+            pass
         ```
 
     Args:
-        *args: Either a callable (if used directly) or one or more tags to filter entities.
+        *args: Either a callable (if used directly, e.g., `@system`) or one or more
+            tags (strings) to filter entities (e.g., `@system("active")`).
 
     Returns:
-        A decorated system function that can be invoked as `system(world)`.
+        A decorated system function that can be invoked as `system(world, *external_args)`.
+        It returns `None`.
+
+    Raises:
+        ValueError: If type hints for ECS components are missing or invalid
+        TypeError: If too many or too few arguments are passed to the wrapper
     """
 
     def decorator(func: Callable) -> Callable:
@@ -265,38 +284,49 @@ def system(*args):
 @overload
 def map(
     *tags: str,
-) -> Callable[[Callable[P, R]], Callable[Concatenate[World, ...], Iterator[R]]]:
-    """Overload: `@map("tag1", "tag2")`."""
+) -> Callable[[Callable[P, R]], Callable[Concatenate[World, ...], Iterator[R]]]: ...
 
 
 @overload
 def map(
     func: Callable[P, None],
-) -> Callable[[Callable[P, R]], Callable[Concatenate[World, ...], Iterator[R]]]:
-    """Overload: `@map` used directly."""
+) -> Callable[[Callable[P, R]], Callable[Concatenate[World, ...], Iterator[R]]]: ...
 
 
-def map(*args):
+def map(
+    *args: Any,
+) -> (
+    Callable[[Callable[P, R]], Callable[Concatenate[World, P], Iterator[R]]] | Callable
+):
     """Decorator similar to `system`, but yields results for each entity.
 
     The `@map` decorator allows defining ECS functions that return a value per entity,
-    enabling collection or transformation of results.
+    enabling collection or transformation of results in a functional style.
+
+    The decorated function's signature must include a [`World`][buds.base.World]
+    instance as its first argument (or the second if it is a method).
 
     Example:
         ```python
         @map
-        def compute_energy(e: Entity, mass: Mass, vel: Velocity) -> float:
+        def compute_energy(world: World, mass: Mass, vel: Velocity) -> float:
             return 0.5 * mass.value * (vel.dx**2 + vel.dy**2)
-        ```
 
-        energies = list(compute_energy(world))
+        # Returns an iterator of floats
+        energies = compute_energy(world)
         ```
 
     Args:
-        *args: Either a callable or one or more tags to filter entities.
+        *args: Either a callable (if used directly, e.g., `@map`) or one or more
+            tags (strings) to filter entities (e.g., `@map("visible")`).
 
     Returns:
-        A decorated function that yields one result per matched entity.
+        A decorated function that accepts a [`World`][buds.base.World] and external
+        arguments, and yields one result (`R`) per matched entity.
+
+    Raises:
+        ValueError: If type hints for ECS components are missing or invalid
+        TypeError: If too many or too few arguments are passed to the wrapper
     """
 
     def decorator(func: Callable) -> Callable:

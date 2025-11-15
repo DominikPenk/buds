@@ -8,9 +8,15 @@ theme:
 nav:
   - Home: index.md
   - API:
-      - Core: api/core.md
+      - Core: api/base.md
+      - System: api/system.md
       - Itertools: api/itertools.md
-
+      - Seeds: api/seeds.md
+      - World Implementations:
+        - Archetypes: api/worlds/archetypes.md
+        - Sparse: api/worlds/sparse.md
+      - Extras:
+        - numpy: api/extras/numpy.md
 plugins:
   - search
   - mkdocstrings

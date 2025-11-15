@@ -53,6 +53,18 @@ R = TypeVar("R")
 
 
 class Query:
+    """Defines a query for entities based on a set of traits and optional tags.
+
+    This class serves as a declarative way to specify which entities and
+    traits an iterator function should operate on, allowing for
+    multi-query operations in functions like
+    [`entity_product`][buds.itertools.entity_product].
+
+    Args:
+        *traits: One or more trait types that entities must possess.
+        tags: An optional set of tags (strings) that entities must possess.
+    """
+
     def __init__(self, *traits: type[Trait], tags: Optional[set[str]] = None):
         self.traits = traits
         self.tags = tags
@@ -96,22 +108,37 @@ def _resolve_queries(
 
 def entity_product(
     world: World,
-    *queries: type[Trait],
+    *queries: type[Trait] | Query,
     tags: Optional[set[str]] = None,
     repeat: int = 1,
 ) -> Iterator[tuple[tuple[Entity, ...], tuple[tuple[Trait, ...], ...]]]:
-    """Generates the Cartesian product of entities matching given traits and tags.
+    """Generates the Cartesian product of entities matching given criteria.
+
+    This function yields the product of results from one or more queries,
+    similar to [`itertools.product`](https://docs.python.org/3/library/itertools.html#itertools.product).
+
+    Queries can be provided as:
+    1. A single set of `traits` and an optional `tags` argument (traditional query).
+    2. Multiple `Query` objects, each defining a separate set of traits and tags.
 
     Args:
-        world: The ECS world to query.
-        *traits: Trait types to filter entities by.
-        tags: Optional set of tags to filter entities.
-        repeat: Number of repetitions of the product.
+        world: The ECS world ([`buds.base.World`][buds.base.World]) to query.
+        *queries: One or more trait types or [`Query`][buds.itertools.Query] objects.
+            If trait types are provided, they apply to a single query.
+            If [`Query`][buds.itertools.Query] objects are provided, each object represents a
+            separate input sequence for the product.
+        tags: Optional set of tags to filter entities. Only used if `*queries`
+            contains only trait types (not [`Query`][buds.itertools.Query] objects).
+        repeat: Number of repetitions of the input sequences.
 
     Yields:
         Tuples containing:
-        - A tuple of `Entity` instances.
+        - A tuple of [`Entity`][buds.base.Entity] instances.
         - A tuple of corresponding trait tuples.
+
+    Raises:
+        ValueError: If a mix of trait types and [`Query`][buds.itertools.Query] objects is used.
+        TypeError: If `tags` is provided when using one or more [`Query`][buds.itertools.Query] objects.
     """
     query_results = _resolve_queries(world, *queries, tags=tags)
     for prod_entry in itertools.product(*query_results, repeat=repeat):
@@ -126,14 +153,23 @@ def trait_product(
 ) -> Iterator[tuple[tuple[Trait, ...], ...]]:
     """Generates the Cartesian product of traits from entities matching given criteria.
 
+    This function is similar to [`entity_product`][buds.itertools.entity_product] but only
+    yields the traits, excluding the entity reference.
+
     Args:
-        world: The ECS world to query.
-        *traits: Trait types to filter entities by.
-        tags: Optional set of tags to filter entities.
-        repeat: Number of repetitions of the product.
+        world: The ECS world ([`buds.base.World`][buds.base.World]) to query.
+        *queries: One or more trait types or [`Query`][buds.itertools.Query] objects.
+            See [`entity_product`][buds.itertools.entity_product] for details on query types.
+        tags: Optional set of tags to filter entities. Only used if `*queries`
+            contains only trait types.
+        repeat: Number of repetitions of the input sequences.
 
     Yields:
         Tuples of trait combinations drawn from the Cartesian product.
+
+    Raises:
+        ValueError: If a mix of trait types and [`Query`][buds.itertools.Query] objects is used.
+        TypeError: If `tags` is provided when using one or more [`Query`][buds.itertools.Query] objects.
     """
     query_results = _resolve_queries(world, *queries, tags=tags, traits_only=True)
     yield from itertools.product(*query_results, repeat=repeat)
@@ -142,18 +178,21 @@ def trait_product(
 def entity_permutations(
     world: World, r: int, *traits: type[Trait], tags: Optional[set[str]] = None
 ) -> Iterator[tuple[tuple[Entity, ...], tuple[tuple[Trait, ...], ...]]]:
-    """Generates r-length permutations of entities matching given traits and tags.
+    """Generates r-length permutations of unique entities matching given traits and tags.
 
     Args:
-        world: The ECS world to query.
-        r: The length of each permutation.
+        world: The ECS world ([`buds.base.World`][buds.base.World]) to query.
+        r: The length of each permutation (must be less than the number of matching entities).
         *traits: Trait types to filter entities by.
         tags: Optional set of tags to filter entities.
 
     Yields:
         Tuples containing:
-        - A tuple of permuted `Entity` instances.
+        - A tuple of permuted [`Entity`][buds.base.Entity] instances.
         - A tuple of corresponding trait tuples.
+
+    Raises:
+        TypeError: Inherited from [`World.get_entities`][buds.base.World.get_entities]
     """
     for perm in itertools.permutations(world.get_entities(*traits, tags=tags), r=r):
         yield zip(*perm)
@@ -162,16 +201,22 @@ def entity_permutations(
 def trait_permutations(
     world: World, r: int, *traits: type[Trait], tags: Optional[set[str]] = None
 ) -> Iterator[tuple[tuple[Trait, ...], ...]]:
-    """Generates r-length permutations of trait tuples.
+    """Generates r-length permutations of trait tuples from matching entities.
+
+    This function is similar to [`entity_permutations`][buds.itertools.entity_permutations] but
+    only yields the traits, excluding the entity reference.
 
     Args:
-        world: The ECS world to query.
-        r: The length of each permutation.
+        world: The ECS world ([`buds.base.World`][buds.base.World]) to query.
+        r: The length of each permutation (must be less the number of matching entities).
         *traits: Trait types to include.
         tags: Optional set of tags to filter entities.
 
     Yields:
         Tuples of trait permutations.
+
+    Raises:
+        TypeError: Inherited from [`World.get_entities`][buds.base.World.get_entities]
     """
     yield from itertools.permutations(world.get_traits(*traits, tags=tags), r=r)
 
@@ -179,18 +224,21 @@ def trait_permutations(
 def entity_combinations(
     world: World, r: int, *traits: type[Trait], tags: Optional[set[str]] = None
 ) -> Iterator[tuple[tuple[Entity, ...], tuple[tuple[Trait, ...], ...]]]:
-    """Generates r-length combinations of entities matching given traits and tags.
+    """Generates r-length combinations of unique entities matching given traits and tags.
 
     Args:
-        world: The ECS world to query.
+        world: The ECS world ([`buds.base.World`][buds.base.World]) to query.
         r: The length of each combination.
         *traits: Trait types to filter entities by.
         tags: Optional set of tags to filter entities.
 
     Yields:
         Tuples containing:
-        - A tuple of combined `Entity` instances.
+        - A tuple of combined [`Entity`][buds.base.Entity] instances.
         - A tuple of corresponding trait tuples.
+
+    Raises:
+        TypeError: Inherited from [`World.get_entities`][buds.base.World.get_entities]
     """
     for combination in itertools.combinations(
         world.get_entities(*traits, tags=tags), r
@@ -201,16 +249,22 @@ def entity_combinations(
 def trait_combinations(
     world: World, r: int, *traits: type[Trait], tags: Optional[set[str]] = None
 ) -> Iterator[tuple[tuple[Trait, ...], ...]]:
-    """Generates r-length combinations of trait tuples.
+    """Generates r-length combinations of trait tuples from matching entities.
+
+    This function is similar to [`entity_combinations`][buds.itertools.entity_combinations] but
+    only yields the traits, excluding the entity reference.
 
     Args:
-        world: The ECS world to query.
+        world: The ECS world ([`buds.base.World`][buds.base.World]) to query.
         r: The length of each combination.
         *traits: Trait types to include.
         tags: Optional set of tags to filter entities.
 
     Yields:
         Tuples of trait combinations.
+
+    Raises:
+        TypeError: Inherited from [`World.get_entities`][buds.base.World.get_entities]
     """
     yield from itertools.combinations(world.get_traits(*traits, tags=tags), r)
 
@@ -220,16 +274,22 @@ def entity_combinations_with_replacement(
 ) -> Iterator[tuple[tuple[Entity, ...], tuple[tuple[Trait, ...], ...]]]:
     """Generates r-length combinations of entities with replacement.
 
+    Entities matching the criteria can appear multiple times in the resulting
+    combinations.
+
     Args:
-        world: The ECS world to query.
+        world: The ECS world ([`buds.base.World`][buds.base.World]) to query.
         r: The length of each combination.
         *traits: Trait types to filter entities by.
         tags: Optional set of tags to filter entities.
 
     Yields:
         Tuples containing:
-        - A tuple of `Entity` instances.
+        - A tuple of [`Entity`][buds.base.Entity] instances.
         - A tuple of corresponding trait tuples.
+
+    Raises:
+        TypeError: Inherited from [`World.get_entities`][buds.base.World.get_entities]
     """
     for comb in itertools.combinations_with_replacement(
         world.get_entities(*traits, tags=tags), r=r
@@ -242,14 +302,21 @@ def trait_combinations_with_replacement(
 ) -> Iterator[tuple[tuple[Trait, ...], ...]]:
     """Generates r-length combinations of trait tuples with replacement.
 
+    This function is similar to
+    [`entity_combinations_with_replacement`][buds.itertools.entity_combinations_with_replacement]
+    but only yields the traits, excluding the entity reference.
+
     Args:
-        world: The ECS world to query.
+        world: The ECS world ([`buds.base.World`][buds.base.World]) to query.
         r: The length of each combination.
         *traits: Trait types to include.
         tags: Optional set of tags to filter entities.
 
     Yields:
         Tuples of trait combinations with replacement.
+
+    Raises:
+        TypeError: Inherited from [`World.get_entities`][buds.base.World.get_entities]
     """
     yield from itertools.combinations_with_replacement(
         world.get_traits(*traits, tags=tags), r=r
@@ -264,14 +331,20 @@ def entity_filter(
 ) -> Iterator[tuple[Entity, tuple[Trait, ...]]]:
     """Filters entities and their traits based on a predicate function.
 
+    This is the ECS equivalent of the built-in `filter` function.
+
     Args:
-        world: The ECS world to query.
-        predicate: A function that takes an entity and its traits, returning True if included.
+        world: The ECS world ([`buds.base.World`][buds.base.World]) to query.
+        predicate: A function that takes an entity and its traits, returning
+            `True` if the pair should be included in the results.
         *traits: Trait types to filter entities by.
         tags: Optional set of tags to filter entities.
 
     Yields:
         Tuples of entities and their traits that satisfy the predicate.
+
+    Raises:
+        TypeError: Inherited from [`World.get_entities`][buds.base.World.get_entities]
     """
     for e, traits in world.get_entities(*traits, tags=tags):
         if predicate(e, traits):
@@ -286,14 +359,20 @@ def trait_filter(
 ) -> Iterator[tuple[Trait, ...]]:
     """Filters trait tuples based on a predicate function.
 
+    This function is similar to [`entity_filter`][buds.itertools.entity_filter] but
+    the predicate operates only on the trait tuple.
+
     Args:
-        world: The ECS world to query.
-        predicate: A function that takes a trait tuple and returns True if included.
+        world: The ECS world ([`buds.base.World`][buds.base.World]) to query.
+        predicate: A function that takes a trait tuple and returns `True` if it should be included.
         *traits: Trait types to include.
         tags: Optional set of tags to filter entities.
 
     Yields:
         Trait tuples that satisfy the predicate.
+
+    Raises:
+        TypeError: Inherited from [`World.get_entities`][buds.base.World.get_entities]
     """
     for traits in world.get_traits(*traits, tags=tags):
         if predicate(traits):
@@ -308,14 +387,23 @@ def entity_groupby(
 ) -> Iterator[tuple[Any, Iterator[tuple[Entity, tuple[Trait, ...]]]]]:
     """Groups entities and traits using a key function.
 
+    This is the ECS equivalent of [`itertools.groupby`](https://docs.python.org/3/library/itertools.html#itertools.groupby).
+    Note that for `itertools.groupby` to work correctly, the input sequence
+    must be **sorted** by the grouping key.
+
     Args:
-        world: The ECS world to query.
-        key: A function returning a key to group entities by.
+        world: The ECS world ([`buds.base.World`][buds.base.World]) to query.
+        key: A function that takes an entity and its traits, returning a key
+            to group entities by.
         *traits: Trait types to filter entities by.
         tags: Optional set of tags to filter entities.
 
     Yields:
-        Tuples of (key, group iterator) pairs.
+        Tuples of (key, group iterator) pairs. The group iterator yields
+        (entity, traits) pairs that share the same key.
+
+    Raises:
+        TypeError: Inherited from [`World.get_entities`][buds.base.World.get_entities]
     """
     yield from itertools.groupby(
         world.get_entities(*traits, tags=tags), key=lambda pair: key(*pair)
@@ -330,14 +418,21 @@ def trait_groupby(
 ) -> Iterator[tuple[Any, Iterator[tuple[Trait, ...]]]]:
     """Groups trait tuples using a key function.
 
+    This is similar to [`entity_groupby`][buds.itertools.entity_groupby] but operates
+    only on the trait tuples. The input sequence should be **sorted** by the key.
+
     Args:
-        world: The ECS world to query.
-        key: A function returning a key to group traits by.
+        world: The ECS world ([`buds.base.World`][buds.base.World]) to query.
+        key: A function that takes a trait tuple, returning a key to group traits by.
         *traits: Trait types to include.
         tags: Optional set of tags to filter entities.
 
     Yields:
-        Tuples of (key, group iterator) pairs.
+        Tuples of (key, group iterator) pairs. The group iterator yields
+        trait tuples that share the same key.
+
+    Raises:
+        TypeError: Inherited from [`World.get_entities`][buds.base.World.get_entities]
     """
 
     yield from itertools.groupby(
@@ -353,14 +448,23 @@ def entity_starmap(
 ) -> Iterator[R]:
     """Applies a function to each entity and its associated traits.
 
+    This is the ECS equivalent of [`itertools.starmap`](https://docs.python.org/3/library/itertools.html#itertools.starmap).
+    The function signature must accept the entity followed by its traits as
+    separate positional arguments.
+
     Args:
-        world: The ECS world to query.
-        func: A function to apply to each (entity, traits) pair.
+        world: The ECS world ([`buds.base.World`][buds.base.World]) to query.
+        func: A function to apply to each entity and its traits. Its signature
+            should be `func(entity: Entity, trait1: Trait, trait2: Trait, ...) -> R`.
         *traits: Trait types to filter entities by.
         tags: Optional set of tags to filter entities.
 
     Yields:
         The results of applying the function to each entity-trait pair.
+
+    Raises:
+        TypeError: Inherited from [`World.get_entities`][buds.base.World.get_entities]
+        TypeError: If `func` does not accept the correct number of arguments.
     """
     yield from itertools.starmap(
         lambda e, ts: func(e, *ts), world.get_entities(*traits, tags=tags)
@@ -373,15 +477,23 @@ def trait_starmap(
     *traits: type[Trait],
     tags: Optional[set[str]] = None,
 ) -> Iterator[R]:
-    """Applies a function to each trait tuple.
+    """Applies a function to each trait tuple, unpacking the traits as arguments.
+
+    This function is similar to [`entity_starmap`][buds.itertools.entity_starmap] but
+    only applies the function to the unpacked traits.
 
     Args:
-        world: The ECS world to query.
-        func: A function to apply to each trait tuple.
+        world: The ECS world ([`buds.base.World`][buds.base.World]) to query.
+        func: A function to apply to each trait tuple. Its signature
+            should be `func(trait1: Trait, trait2: Trait, ...) -> R`.
         *traits: Trait types to include.
         tags: Optional set of tags to filter entities.
 
     Yields:
         The results of applying the function to each trait tuple.
+
+    Raises:
+        TypeError: Inherited from [`World.get_entities`][buds.base.World.get_entities]
+        TypeError: If `func` does not accept the correct number of arguments.
     """
     yield from itertools.starmap(func, world.get_traits(*traits, tags=tags))

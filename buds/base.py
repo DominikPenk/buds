@@ -63,11 +63,11 @@ class TraitNotFoundError(Exception):
 def trait(cls: T) -> T:
     """Marks a dataclass as a trait type within the ECS system.
 
-    This decorator converts the class into a dataclass and flags it
+    This decorator converts the class into a **dataclass** and flags it
     as a recognized ECS trait.
 
     Args:
-        cls: The class to mark as a trait.
+        cls: The class to mark as a trait. Must be a class type.
 
     Returns:
         The same class, transformed into a dataclass and marked as a trait.
@@ -109,7 +109,7 @@ def is_trait_type(cls: type) -> bool:
 class Trait:
     """Base class for defining ECS traits.
 
-    Subclasses of `Trait` are automatically marked as traits via `__init_subclass__`.
+    Subclasses of `Trait` are automatically marked as traits.
     """
 
     def __init_subclass__(cls):
@@ -148,7 +148,7 @@ class World(abc.ABC):
             entity: The entity ID to delete.
 
         Raises:
-            EntityNotFoundError: If the entity does not exist.
+            EntityNotFoundError: If the entity ID does not exist in the world.
         """
 
     @abc.abstractmethod
@@ -166,9 +166,9 @@ class World(abc.ABC):
     def add_trait(self, entity: int, trait: _Trait) -> None:
         """Adds a trait instance to an entity.
 
-        Args:
-            entity: The target entity ID.
-            trait: The trait instance to add.
+        Raises:
+            EntityNotFoundError: If the entity ID does not exist.
+            TypeError: If the trait is not a valid trait instance (not decorated by [`@trait`][buds.base.trait]).
         """
 
     @abc.abstractmethod
@@ -178,6 +178,11 @@ class World(abc.ABC):
         Args:
             entity: The target entity ID.
             trait_type: The type of the trait to remove.
+
+        Raises:
+            EntityNotFoundError: If the entity ID does not exist.
+            TraitNotFoundError: If the entity does not have the specified trait type.
+            TypeError: If the trait is not a valid trait instance (not decorated by [`@trait`][buds.base.trait]).
         """
 
     @abc.abstractmethod
@@ -190,6 +195,10 @@ class World(abc.ABC):
 
         Returns:
             True if the entity has the trait, False otherwise.
+
+        Raises:
+            EntityNotFoundError: If the entity ID does not exist.
+            TypeError: If the trait is not a valid trait instance (not decorated by [`@trait`][buds.base.trait]).
         """
 
     def add_tags(self, entity: int, *tags: str) -> None:
@@ -198,6 +207,10 @@ class World(abc.ABC):
         Args:
             entity: The entity ID.
             *tags: The tags to associate.
+
+        Raises:
+            EntityNotFoundError: If the entity ID does not exist.
+            TypeError: If any of the provided tags are not strings.
         """
         if not self.is_alive(entity):
             raise EntityNotFoundError(entity)
@@ -212,6 +225,10 @@ class World(abc.ABC):
         Args:
             entity: The entity ID.
             *tags: The tags to remove.
+
+        Raises:
+            EntityNotFoundError: If the entity ID does not exist.
+            TypeError: If any of the provided tags are not strings.
         """
         if not all(isinstance(tag, str) for tag in tags):
             raise TypeError("tags must be strings")
@@ -229,6 +246,10 @@ class World(abc.ABC):
 
         Returns:
             True if the entity has all tags, False otherwise.
+
+        Raises:
+            EntityNotFoundError: If the entity ID does not exist.
+            TypeError: If any of the provided tags are not strings.
         """
         if not self.is_alive(entity):
             raise EntityNotFoundError(entity)
@@ -260,6 +281,9 @@ class World(abc.ABC):
 
         Returns:
             An iterator of `(Entity, (traits...))` tuples matching the criteria.
+
+        Raises:
+            TypeError: If any trait_types are not valid trait types or if any `tags` are not strings.
         """
         if not all(is_trait_type(t) for t in trait_types):
             raise TypeError(
@@ -293,14 +317,18 @@ class World(abc.ABC):
 
         Returns:
             An iterator of trait tuples matching the criteria.
+
+        Raises:
+            TypeError: If any trait_types are not valid trait types or if any `tags` are not strings.
         """
         yield from map(lambda r: r[1], self.get_entities(*trait_types, tags=tags))
 
 
 class Entity:
-    """Represents an entity within a `World`.
+    """Represents an entity within a :class:`World`.
 
     Entities act as handles for managing traits and tags within the ECS system.
+    They encapsulate the entity ID and provide convenient methods to interact with the world.
     """
 
     def __init__(self, id: int, world: World) -> None:
@@ -345,6 +373,10 @@ class Entity:
 
         Returns:
             The entity itself, allowing method chaining.
+
+        Raises:
+            EntityNotFoundError: Inherited from [`World.add_trait`][buds.base.World.add_trait].
+            TypeError: Inherited from [`World.add_trait`][buds.base.World.add_trait].
         """
         self.world.add_trait(self.id, trait)
         return self
@@ -357,6 +389,10 @@ class Entity:
 
         Returns:
             The entity itself, allowing method chaining.
+
+        Raises:
+            EntityNotFoundError: Inherited from [`World.remove_trait`][buds.base.World.remove_trait].
+            TraitNotFoundError: Inherited from [`World.remove_trait`][buds.base.World.remove_trait].
         """
         self.world.remove_trait(self.id, trait_type)
         return self
@@ -369,6 +405,10 @@ class Entity:
 
         Returns:
             True if the entity has the trait, False otherwise.
+
+        Raises:
+            EntityNotFoundError: Inherited from [`World.has_tags`][buds.base.World.has_tags].
+            TypeError: Inherited from [`World.has_tags`][buds.base.World.has_tags].
         """
         return self.world.has_trait(self.id, trait_type)
 
@@ -380,6 +420,10 @@ class Entity:
 
         Returns:
             The entity itself, allowing method chaining.
+
+        Raises:
+            EntityNotFoundError: Inherited from [`World.add_tags`][buds.base.World.add_tags].
+            TypeError: Inherited from [`World.add_tags`][buds.base.World.add_tags].
         """
         self.world.add_tags(self.id, *tags)
         return self
@@ -408,7 +452,14 @@ class Entity:
         return self.world.has_tags(self.id, *tags)
 
     def delete(self) -> None:
-        """Deletes the entity from its world."""
+        """Deletes the entity from its world.
+
+        After deletion, the entity object's internal world reference is cleared,
+        and subsequent method calls (like [`is_alive`][buds.base.Entity.is_alive]) will reflect its dead state.
+
+        Raises:
+            EntityNotFoundError: Inherited from [`World.delete_entity`][buds.base.World.delete_entity].
+        """
         self.world.delete_entity(self.id)
         self.world = None
 
