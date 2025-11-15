@@ -1,0 +1,16 @@
+site_name: Buds ECS Library
+docs_dir: docs
+site_description: "Documentation for the Buds Entity-Component-System library written completely in python"
+
+theme:
+  name: material
+
+nav:
+  - Home: index.md
+  - API:
+      - Core: api/core.md
+      - Itertools: api/itertools.md
+
+plugins:
+  - search
+  - mkdocstrings

@@ -1,0 +1,421 @@
+"""Base ECS abstractions and foundational classes.
+
+This module defines the fundamental building blocks of the Entity–Component–System (ECS)
+architecture used across the library, including the `World`, `Entity`, and trait utilities.
+
+It provides:
+- The `World` base class, which defines the common interface for all world implementations.
+- The `Entity` wrapper, representing individual entities within a world.
+- The `is_trait` and `is_trait_type` utilities for validating trait instances and types.
+
+All higher-level modules (`sparse`, `archetype`, `seed`) build upon these abstractions.
+
+Exports:
+    World
+    Entity
+    is_trait
+    is_trait_type
+"""
+
+from __future__ import annotations
+import abc
+from dataclasses import dataclass
+from typing import TypeVar, Optional
+from collections.abc import Iterator
+from collections import defaultdict
+import inspect
+
+
+Seed = TypeVar("Seed")
+T = TypeVar("T")
+
+TRAIT_HINT = "__is_trait"
+
+__all__ = [
+    "Entity",
+    "trait",
+    "is_trait",
+    "is_trait_type",
+    "World",
+    "Trait",
+    "EntityNotFoundError",
+    "TraitNotFoundError",
+]
+
+
+class EntityNotFoundError(Exception):
+    """Exception raised when an entity is not found in the world."""
+
+    def __init__(self, msg: int | Entity | str):
+        if isinstance(msg, Entity):
+            msg = f"Entity {msg.id} does not exist"
+        elif isinstance(msg, int):
+            msg = f"Entity {msg} does not exist"
+        super().__init__(msg)
+
+
+class TraitNotFoundError(Exception):
+    """Exception raised when a trait is not found on an entity."""
+
+    pass
+
+
+def trait(cls: T) -> T:
+    """Marks a dataclass as a trait type within the ECS system.
+
+    This decorator converts the class into a dataclass and flags it
+    as a recognized ECS trait.
+
+    Args:
+        cls: The class to mark as a trait.
+
+    Returns:
+        The same class, transformed into a dataclass and marked as a trait.
+    """
+    cls = dataclass(cls)
+    setattr(cls, TRAIT_HINT, True)
+    return cls
+
+
+def make_trate_type(cls: type[T]) -> type[T]:
+    setattr(cls, TRAIT_HINT, True)
+    return cls
+
+
+def is_trait(obj: object) -> bool:
+    """Checks whether an object instance is marked as a trait.
+
+    Args:
+        obj: The object to check.
+
+    Returns:
+        True if the object is a trait instance, False otherwise.
+    """
+    return hasattr(obj, "__is_trait")
+
+
+def is_trait_type(cls: type) -> bool:
+    """Checks whether a class type is marked as a trait.
+
+    Args:
+        cls: The class to check.
+
+    Returns:
+        True if the class is a trait type, False otherwise.
+    """
+    return inspect.isclass(cls) and hasattr(cls, "__is_trait")
+
+
+class Trait:
+    """Base class for defining ECS traits.
+
+    Subclasses of `Trait` are automatically marked as traits via `__init_subclass__`.
+    """
+
+    def __init_subclass__(cls):
+        """Automatically marks all subclasses as ECS traits."""
+        return trait(cls)
+
+
+_Trait = TypeVar("_Trait", bound=Trait)
+
+
+class World(abc.ABC):
+    """Abstract base class defining the ECS world interface.
+
+    A `World` manages entity creation, deletion, and their associated traits and tags.
+    """
+
+    def __init__(self) -> None:
+        self._tags: dict[str, set[int]] = defaultdict(set)
+
+    @abc.abstractmethod
+    def create_entity(self, *traits: _Trait) -> Entity:
+        """Creates a new entity and assigns the given traits.
+
+        Args:
+            *traits: Optional traits to attach to the new entity.
+
+        Returns:
+            The newly created entity.
+        """
+
+    @abc.abstractmethod
+    def delete_entity(self, entity: int) -> None:
+        """Deletes an entity from the world.
+
+        Args:
+            entity: The entity ID to delete.
+
+        Raises:
+            EntityNotFoundError: If the entity does not exist.
+        """
+
+    @abc.abstractmethod
+    def is_alive(self, entity: int) -> bool:
+        """Checks whether an entity currently exists in the world.
+
+        Args:
+            entity: The entity ID to check.
+
+        Returns:
+            True if the entity is active, False otherwise.
+        """
+
+    @abc.abstractmethod
+    def add_trait(self, entity: int, trait: _Trait) -> None:
+        """Adds a trait instance to an entity.
+
+        Args:
+            entity: The target entity ID.
+            trait: The trait instance to add.
+        """
+
+    @abc.abstractmethod
+    def remove_trait(self, entity: int, trait_type: type[_Trait]) -> None:
+        """Removes a specific trait type from an entity.
+
+        Args:
+            entity: The target entity ID.
+            trait_type: The type of the trait to remove.
+        """
+
+    @abc.abstractmethod
+    def has_trait(self, entity: int, trait_type: type[_Trait]) -> bool:
+        """Checks whether an entity has a given trait type.
+
+        Args:
+            entity: The entity ID.
+            trait_type: The trait type to check.
+
+        Returns:
+            True if the entity has the trait, False otherwise.
+        """
+
+    def add_tags(self, entity: int, *tags: str) -> None:
+        """Associates one or more tags with an entity.
+
+        Args:
+            entity: The entity ID.
+            *tags: The tags to associate.
+        """
+        if not self.is_alive(entity):
+            raise EntityNotFoundError(entity)
+        if not all(isinstance(tag, str) for tag in tags):
+            raise TypeError("tags must be strings")
+        for tag in tags:
+            self._tags[tag].add(entity)
+
+    def remove_tags(self, entity: int, *tags: str) -> None:
+        """Removes one or more tags from an entity.
+
+        Args:
+            entity: The entity ID.
+            *tags: The tags to remove.
+        """
+        if not all(isinstance(tag, str) for tag in tags):
+            raise TypeError("tags must be strings")
+        if not self.is_alive(entity):
+            raise EntityNotFoundError(entity)
+        for tag in tags:
+            self._tags[tag].discard(entity)
+
+    def has_tags(self, entity: int, *tags: str) -> bool:
+        """Checks whether an entity has all specified tags.
+
+        Args:
+            entity: The entity ID.
+            *tags: The tags to check.
+
+        Returns:
+            True if the entity has all tags, False otherwise.
+        """
+        if not self.is_alive(entity):
+            raise EntityNotFoundError(entity)
+        if not all(isinstance(tag, str) for tag in tags):
+            raise TypeError("tags must be strings")
+        return all(entity in self._tags[tag] for tag in tags)
+
+    @abc.abstractmethod
+    def get_entities_from_traits(
+        self, *trait_types: type[_Trait]
+    ) -> Iterator[tuple[Entity, tuple[_Trait, ...]]]:
+        """Retrieves all entities that possess the specified traits.
+
+        Args:
+            *trait_types: Trait types to filter entities by.
+
+        Returns:
+            An iterator of `(Entity, (traits...))` tuples.
+        """
+
+    def get_entities(
+        self, *trait_types: type[_Trait], tags: Optional[set[str] | str] = None
+    ) -> Iterator[tuple[Entity, tuple[_Trait, ...]]]:
+        """Retrieves entities that match the given traits and optional tags.
+
+        Args:
+            *trait_types: Trait types to filter entities by.
+            tags: Optional set of tags to filter entities.
+
+        Returns:
+            An iterator of `(Entity, (traits...))` tuples matching the criteria.
+        """
+        if not all(is_trait_type(t) for t in trait_types):
+            raise TypeError(
+                "Attempted to query non-trait types. All traits must be decorated with @trait."
+            )
+        if tags is None:
+            yield from self.get_entities_from_traits(*trait_types)
+            return
+
+        if isinstance(tags, str):
+            tags = {
+                tags,
+            }
+
+        if not all(isinstance(t, str) for t in tags):
+            raise TypeError("tags must be strings")
+
+        yield from filter(
+            lambda e: self.has_tags(e[0].id, *tags),
+            self.get_entities_from_traits(*trait_types),
+        )
+
+    def get_traits(
+        self, *trait_types: type[_Trait], tags: Optional[set[str]] = None
+    ) -> Iterator[tuple[_Trait, ...]]:
+        """Retrieves only the trait tuples of entities matching given traits and tags.
+
+        Args:
+            *trait_types: Trait types to include.
+            tags: Optional set of tags to filter entities.
+
+        Returns:
+            An iterator of trait tuples matching the criteria.
+        """
+        yield from map(lambda r: r[1], self.get_entities(*trait_types, tags=tags))
+
+
+class Entity:
+    """Represents an entity within a `World`.
+
+    Entities act as handles for managing traits and tags within the ECS system.
+    """
+
+    def __init__(self, id: int, world: World) -> None:
+        """Initializes an entity instance.
+
+        Args:
+            id: The unique entity ID.
+            world: The world instance this entity belongs to.
+        """
+        self.id = id
+        self.world = world
+
+    def __repr__(self) -> str:
+        return f"<Entity({self.id})>"
+
+    def __int__(self) -> int:
+        return self.id
+
+    def __eq__(self, other: Entity) -> bool:
+        return other.id == self.id and other.world == self.world
+
+    def __ne__(self, other: Entity) -> bool:
+        return self.id != other.id or other.world != self.world
+
+    def __gt__(self, other: Entity) -> bool:
+        return self.id > other.id
+
+    def __ge__(self, other: Entity) -> bool:
+        return self.id >= other.id
+
+    def __lt__(self, other: Entity) -> bool:
+        return self.id < other.id
+
+    def __le__(self, other: Entity) -> bool:
+        return self.id <= other.id
+
+    def add_trait(self, trait: _Trait) -> Entity:
+        """Adds a trait to the entity.
+
+        Args:
+            trait: The trait instance to add.
+
+        Returns:
+            The entity itself, allowing method chaining.
+        """
+        self.world.add_trait(self.id, trait)
+        return self
+
+    def remove_trait(self, trait_type: type[_Trait]) -> Entity:
+        """Removes a trait type from the entity.
+
+        Args:
+            trait_type: The type of the trait to remove.
+
+        Returns:
+            The entity itself, allowing method chaining.
+        """
+        self.world.remove_trait(self.id, trait_type)
+        return self
+
+    def has_trait(self, trait_type: type[_Trait]) -> bool:
+        """Checks if the entity has a specific trait type.
+
+        Args:
+            trait_type: The trait type to check.
+
+        Returns:
+            True if the entity has the trait, False otherwise.
+        """
+        return self.world.has_trait(self.id, trait_type)
+
+    def add_tags(self, *tags: str) -> Entity:
+        """Adds tags to the entity.
+
+        Args:
+            *tags: One or more tags to add.
+
+        Returns:
+            The entity itself, allowing method chaining.
+        """
+        self.world.add_tags(self.id, *tags)
+        return self
+
+    def remove_tags(self, *tags: str) -> Entity:
+        """Removes tags from the entity.
+
+        Args:
+            *tags: One or more tags to remove.
+
+        Returns:
+            The entity itself, allowing method chaining.
+        """
+        self.world.remove_tags(self.id, *tags)
+        return self
+
+    def has_tags(self, *tags: str) -> bool:
+        """Checks whether the entity has all specified tags.
+
+        Args:
+            *tags: The tags to check.
+
+        Returns:
+            True if all tags are present, False otherwise.
+        """
+        return self.world.has_tags(self.id, *tags)
+
+    def delete(self) -> None:
+        """Deletes the entity from its world."""
+        self.world.delete_entity(self.id)
+        self.world = None
+
+    def is_alive(self) -> bool:
+        """Checks if the entity still exists in the world.
+
+        Returns:
+            True if the entity is active, False otherwise.
+        """
+        return self.world is not None and self.world.is_alive(self.id)

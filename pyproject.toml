@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "buds"
+version = "0.1.0"
+description = "An Entity-Component-System library for Python"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Dominik Penk", email = "penk.dominik@gmail.com" }
+]
+keywords = ["ECS", "Entity Component System", "Python"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+docs = [
+    "mkdocs~=1.6",
+    "mkdocs-material~=9.6",
+    "mkdocstrings~=0.3",
+]
+extras=[
+    "numpy~=2.3.4"
+]
