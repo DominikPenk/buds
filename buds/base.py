@@ -20,7 +20,7 @@ Exports:
 from __future__ import annotations
 import abc
 from dataclasses import dataclass
-from typing import TypeVar, Optional
+from typing import TypeVar, Optional, overload
 from collections.abc import Iterator
 from collections import defaultdict
 import inspect
@@ -28,6 +28,7 @@ import inspect
 
 Seed = TypeVar("Seed")
 T = TypeVar("T")
+
 
 TRAIT_HINT = "__is_trait"
 
@@ -117,7 +118,11 @@ class Trait:
         return trait(cls)
 
 
-_Trait = TypeVar("_Trait", bound=Trait)
+_Trait = TypeVar("_Trait")
+_T1 = TypeVar("_T1")
+_T2 = TypeVar("_T2")
+_T3 = TypeVar("_T3")
+_T4 = TypeVar("_T4")
 
 
 class World(abc.ABC):
@@ -270,9 +275,41 @@ class World(abc.ABC):
             An iterator of `(Entity, (traits...))` tuples.
         """
 
+    @overload
+    def get_entities(
+        self, trait_1: type[_T1], tags: Optional[set[str] | str] = None
+    ) -> Iterator[tuple[Entity, _T1]]: ...
+
+    @overload
+    def get_entities(
+        self,
+        trait_1: type[_T1],
+        trait_2: type[_T2],
+        tags: Optional[set[str] | str] = None,
+    ) -> Iterator[tuple[Entity, tuple[_T1, _T2]]]: ...
+
+    @overload
+    def get_entities(
+        self,
+        trait_1: type[_T1],
+        trait_2: type[_T2],
+        trait_3: type[_T3],
+        tags: Optional[set[str] | str] = None,
+    ) -> Iterator[tuple[Entity, tuple[_T1, _T2, _T3]]]: ...
+
+    @overload
+    def get_entities(
+        self,
+        trait_1: type[_T1],
+        trait_2: type[_T2],
+        trait_3: type[_T3],
+        trait_4: type[_T4],
+        tags: Optional[set[str] | str] = None,
+    ) -> Iterator[tuple[Entity, tuple[_T1, _T2, _T3, _T4]]]: ...
+
     def get_entities(
         self, *trait_types: type[_Trait], tags: Optional[set[str] | str] = None
-    ) -> Iterator[tuple[Entity, tuple[_Trait, ...]]]:
+    ) -> Iterator[tuple[Entity, tuple[_Trait, ...] | _Trait]]:
         """Retrieves entities that match the given traits and optional tags.
 
         Args:
@@ -290,25 +327,61 @@ class World(abc.ABC):
                 "Attempted to query non-trait types. All traits must be decorated with @trait."
             )
         if tags is None:
-            yield from self.get_entities_from_traits(*trait_types)
-            return
+            iterator = self.get_entities_from_traits(*trait_types)
+        else:
+            if isinstance(tags, str):
+                tags = {
+                    tags,
+                }
 
-        if isinstance(tags, str):
-            tags = {
-                tags,
-            }
+            if not all(isinstance(t, str) for t in tags):
+                raise TypeError("tags must be strings")
 
-        if not all(isinstance(t, str) for t in tags):
-            raise TypeError("tags must be strings")
+            iterator = filter(
+                lambda e: self.has_tags(e[0].id, *tags),
+                self.get_entities_from_traits(*trait_types),
+            )
 
-        yield from filter(
-            lambda e: self.has_tags(e[0].id, *tags),
-            self.get_entities_from_traits(*trait_types),
-        )
+        if len(trait_types) == 1:
+            yield from map(lambda e: (e[0], e[1][0]), iterator)
+        else:
+            yield from iterator
+
+    @overload
+    def get_traits(
+        self, trait_1: type[_T1], tags: Optional[set[str] | str] = None
+    ) -> Iterator[_T1]: ...
+
+    @overload
+    def get_traits(
+        self,
+        trait_1: type[_T1],
+        trait_2: type[_T2],
+        tags: Optional[set[str] | str] = None,
+    ) -> Iterator[tuple[_T1, _T2]]: ...
+
+    @overload
+    def get_traits(
+        self,
+        trait_1: type[_T1],
+        trait_2: type[_T2],
+        trait_3: type[_T3],
+        tags: Optional[set[str] | str] = None,
+    ) -> Iterator[tuple[_T1, _T2, _T3]]: ...
+
+    @overload
+    def get_traits(
+        self,
+        trait_1: type[_T1],
+        trait_2: type[_T2],
+        trait_3: type[_T3],
+        trait_4: type[_T4],
+        tags: Optional[set[str] | str] = None,
+    ) -> Iterator[tuple[_T1, _T2, _T3, _T4]]: ...
 
     def get_traits(
         self, *trait_types: type[_Trait], tags: Optional[set[str]] = None
-    ) -> Iterator[tuple[_Trait, ...]]:
+    ) -> Iterator[tuple[_Trait, ...] | _Trait]:
         """Retrieves only the trait tuples of entities matching given traits and tags.
 
         Args:

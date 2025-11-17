@@ -91,7 +91,7 @@ def main(args: Arguments):
             p.vel -= correction.sum(axis=1)
             p.write_back()
         else:
-            for (p0,), (p1,) in buds.itertools.trait_combinations(world, 2, Particle):
+            for p0, p1 in buds.itertools.trait_combinations(world, 2, Particle):
                 dpos = p1.pos - p0.pos
                 dvel = p1.vel - p0.vel
                 square_dist = dpos[0] * dpos[0] + dpos[1] * dpos[1]
@@ -104,7 +104,9 @@ def main(args: Arguments):
 
                 p0.vel = p0.vel + correction
                 p1.vel = p1.vel - correction
+
             move_particles(world, args.size)
+
     print()
 
 

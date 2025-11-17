@@ -176,7 +176,7 @@ def _parse_wrapper_args(
 def _map_kwargs(
     entity: Entity,
     world: World,
-    trait_data: tuple[Trait, ...],
+    trait_data: tuple[Trait, ...] | Trait,
     system_signature: SystemSignature,
 ) -> dict[str, Any]:
     """Build keyword arguments to call the original system function.
@@ -191,6 +191,8 @@ def _map_kwargs(
         A dictionary of keyword arguments matching the system’s parameters.
     """
     kwargs = {}
+    if not isinstance(trait_data, tuple):
+        trait_data = (trait_data,)
 
     if system_signature.entity_param:
         kwargs[system_signature.entity_param] = entity

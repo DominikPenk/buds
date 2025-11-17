@@ -1,6 +1,6 @@
 import pytest
 
-from buds.base import Entity
+from buds.base import Entity, World, trait
 
 
 class DummyWorld:
@@ -88,3 +88,62 @@ def test_lt(e1: Entity, e2: Entity, expected: bool):
 )
 def test_le(e1: Entity, e2: Entity, expected: bool):
     assert (e1 <= e2) == expected
+
+
+# ---------------------------------------------------------------------------
+# Test convenience methods
+# ---------------------------------------------------------------------------
+@trait
+class TestTrait:
+    pass
+
+
+def test_add_and_remove_trait(world):
+    e: Entity = world.create_entity()
+    e.add_trait(TestTrait())
+    assert world.has_trait(e.id, TestTrait)
+
+    e.remove_trait(TestTrait)
+    assert not world.has_trait(e.id, TestTrait)
+
+
+def test_has_trait(world):
+    e: Entity = world.create_entity(TestTrait())
+    assert e.has_trait(TestTrait)
+
+
+def test_add_and_remove_tags(world):
+    e: Entity = world.create_entity()
+    e.add_tags("alpha", "beta")
+    assert world.has_tags(e.id, "alpha")
+    assert world.has_tags(e.id, "beta")
+    assert world.has_tags(e.id, "alpha", "beta")
+
+    e.remove_tags("beta")
+    assert world.has_tags(e.id, "alpha")
+    assert not world.has_tags(e.id, "beta")
+    assert not world.has_tags(e.id, "alpha", "beta")
+
+    e.remove_tags("alpha")
+    assert not world.has_tags(e.id, "alpha")
+    assert not world.has_tags(e.id, "beta")
+    assert not world.has_tags(e.id, "alpha", "beta")
+
+
+def test_has_tags(world):
+    e: Entity = world.create_entity(TestTrait())
+    e.add_tags("alpha", "beta")
+    assert e.has_tags("alpha")
+    assert e.has_tags("beta")
+    assert e.has_tags("alpha", "beta")
+    assert not e.has_tags("INVALID")
+    assert not e.has_tags("alpha", "INVALID")
+
+
+def test_lifecycle(world):
+    e: Entity = world.create_entity(TestTrait())
+    assert e.is_alive()
+
+    e.delete()
+    assert not e.is_alive()
+    assert not world.is_alive(e.id)

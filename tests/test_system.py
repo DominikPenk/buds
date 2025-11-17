@@ -71,7 +71,7 @@ def test_system_update_traits(world, tags: set[str], expected: list[Position]):
 
     assert len(results) == len(expected)
 
-    for (eid, (pos,)), expected_pos in zip(
+    for (eid, pos), expected_pos in zip(
         populated_world.get_entities(Position, tags=tags), expected
     ):
         assert eid.has_tags(*tags)
@@ -95,7 +95,7 @@ def test_system_without_bracketed_tags(world):
 
     expected_positions = [Position(1, 3), Position(5, 7), Position(9, 11)]
 
-    for (eid, (pos,)), expected_pos in zip(
+    for (eid, pos), expected_pos in zip(
         populated_world.get_entities(Position), expected_positions
     ):
         assert pos.x == pytest.approx(expected_pos.x)
@@ -118,7 +118,7 @@ def test_system_without_tags(world):
 
     expected_positions = [Position(1, 3), Position(5, 7), Position(9, 11)]
 
-    for (eid, (pos,)), expected_pos in zip(
+    for (eid, pos), expected_pos in zip(
         populated_world.get_entities(Position), expected_positions
     ):
         assert pos.x == pytest.approx(expected_pos.x)
@@ -144,7 +144,7 @@ def test_sytem_with_external_args(world):
 
     expected_positions = [Position(15, 27), Position(19, 31)]
 
-    for (eid, (pos,)), expected_pos in zip(
+    for (eid, pos), expected_pos in zip(
         populated_world.get_entities(Position, tags={"npc"}), expected_positions
     ):
         assert eid.has_tags("npc")
@@ -168,7 +168,7 @@ def test_system_forwrads_entity(world):
 
     assert len(results) == 1
 
-    for eid, (pos,) in populated_world.get_entities(Position, tags={"player"}):
+    for eid, pos in populated_world.get_entities(Position, tags={"player"}):
         assert eid.has_tags("player", "moved")
         assert pos.x == pytest.approx(1)
         assert pos.y == pytest.approx(3)
@@ -211,7 +211,7 @@ def test_system_decorator_for_method(world, tags, expected):
 
     assert len(results) == len(expected)
 
-    for (eid, (pos,)), expected_pos in zip(
+    for (eid, pos), expected_pos in zip(
         populated_world.get_entities(Position, tags=tags), expected
     ):
         assert eid.has_tags(*tags)

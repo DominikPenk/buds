@@ -1,6 +1,6 @@
 # tests/ecs_world_contract.py
 import pytest
-from buds.base import trait, World, EntityNotFoundError, TraitNotFoundError
+from buds.base import trait, World, EntityNotFoundError, TraitNotFoundError, Entity
 
 
 # Shared trait types used by the contract tests
@@ -65,6 +65,50 @@ class WorldContract:
             int(ent.id) for ent, _ in self.world.get_entities_from_traits(Position)
         }
         assert {e1.id, e2.id} <= found
+
+    # ---------------------------------------------------------------------------
+    # Query return types
+    # ---------------------------------------------------------------------------
+    def test_get_entities_returns_instances_for_single_trait_query(self):
+        self.world.create_entity(Position(0, 0))
+        self.world.create_entity(Position(1, 1))
+        self.world.create_entity(Position(2, 2))
+        result = list(self.world.get_entities(Position))
+        for answer in result:
+            assert isinstance(answer, tuple)
+            assert isinstance(answer[0], Entity)
+            assert isinstance(answer[1], Position)
+
+    def test_get_entities_returns_tuple_of_instances_for_mulit_trait_query(self):
+        self.world.create_entity(Position(0, 0), Velocity(1, 1))
+        self.world.create_entity(Position(1, 1), Velocity(1, 1))
+        self.world.create_entity(Position(2, 2), Velocity(1, 1))
+        result = list(self.world.get_entities(Position, Velocity))
+        for answer in result:
+            assert isinstance(answer, tuple)
+            assert isinstance(answer[0], Entity)
+            assert isinstance(answer[1], tuple)
+            assert len(answer[1]) == 2
+            assert isinstance(answer[1][0], Position)
+            assert isinstance(answer[1][1], Velocity)
+
+    def test_get_traits_returns_instances_for_single_trait_query(self):
+        self.world.create_entity(Position(0, 0))
+        self.world.create_entity(Position(1, 1))
+        self.world.create_entity(Position(2, 2))
+        result = list(self.world.get_traits(Position))
+        for answer in result:
+            assert isinstance(answer, Position)
+
+    def test_get_traits_returns_tuple_of_instances_for_mulit_trait_query(self):
+        self.world.create_entity(Position(0, 0), Velocity(1, 1))
+        self.world.create_entity(Position(1, 1), Velocity(1, 1))
+        self.world.create_entity(Position(2, 2), Velocity(1, 1))
+        result = list(self.world.get_traits(Position, Velocity))
+        for answer in result:
+            assert isinstance(answer, tuple)
+            assert isinstance(answer[0], Position)
+            assert isinstance(answer[1], Velocity)
 
     # ---------------------------------------------------------------------------
     # Entity reusage
@@ -144,7 +188,7 @@ class WorldContract:
 
         results = list(self.world.get_entities(Position, tags={"player"}))
         assert len(results) == 1
-        (entity, (retrieved_pos,)) = results[0]
+        (entity, retrieved_pos) = results[0]
         assert entity.id == e1.id
         # assert retrieved_pos == pos_a
         assert retrieved_pos.x == pos_a.x and retrieved_pos.y == pos_a.y
@@ -188,9 +232,13 @@ class WorldContract:
     # ---------------------------------------------------------------------------
     def test_add_remove_tags_and_has_tags(self):
         e = self.world.create_entity()
-        e.add_tags("alpha", "beta")
+        self.world.add_tags(e.id, "alpha", "beta")
+        assert self.world.has_tags(e.id, "alpha")
+        assert self.world.has_tags(e.id, "beta")
         assert self.world.has_tags(e.id, "alpha", "beta")
-        e.remove_tags("beta")
+        self.world.remove_tags(e.id, "beta")
+        assert self.world.has_tags(e.id, "alpha")
+        assert not self.world.has_tags(e.id, "beta")
         assert not self.world.has_tags(e.id, "alpha", "beta")
         assert self.world.has_tags(e.id, "alpha")
 

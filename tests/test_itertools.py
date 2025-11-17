@@ -113,6 +113,8 @@ def test_resolve_query_argument_types_and_filtering(
 
         if not isinstance(traits_to_check, tuple):
             traits_to_check = (traits_to_check,)
+        if not isinstance(t_tuple, tuple):
+            t_tuple = (t_tuple,)
 
         assert len(t_tuple) == len(traits_to_check)
         for t, expected_t_cls in zip(t_tuple, traits_to_check):
@@ -165,7 +167,7 @@ def test_entity_product_returns_cartesian_pairs(world):
 
     for ents, traits in results:
         assert all(isinstance(e, Entity) for e in ents)
-        assert all(isinstance(t, tuple) for t in traits)
+        assert all(isinstance(t, Position) for t in traits)
 
 
 def test_entity_product_repeats(world):
@@ -258,7 +260,7 @@ def test_trait_product_cartesian(world):
     npc_query = Query(Position, tags={"npc"})
     results = list(trait_product(populated_world, player_query, npc_query))
     assert all(len(p) == 2 for p in results)
-    for (t1,), (t2,) in results:
+    for t1, t2 in results:
         assert isinstance(t1, Position)
         assert isinstance(t2, Position)
 
@@ -297,13 +299,13 @@ def test_trait_combinations_with_replacement_self_pairs(world):
 
 def test_trait_filter_selects_only_matching(world):
     populated_world = populate_world(world)
-    filtered = list(trait_filter(populated_world, lambda t: t[0].x == 1, Position))
-    assert all(t[0].x == 1 for t in filtered)
+    filtered = list(trait_filter(populated_world, lambda t: t.x == 1, Position))
+    assert all(t.x == 1 for t in filtered)
 
 
 def test_trait_groupby_groups_by_evenness(world):
     populated_world = populate_world(world)
-    grouped = list(trait_groupby(populated_world, lambda t: t[0].x % 2 == 0, Position))
+    grouped = list(trait_groupby(populated_world, lambda t: t.x % 2 == 0, Position))
     keys = [k for k, _ in grouped]
     assert {True, False}.issuperset(keys)
 
