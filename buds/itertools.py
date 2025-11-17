@@ -26,9 +26,10 @@ Exports:
 """
 
 import itertools
-from .base import World, Entity
-from typing import TypeVar, Callable, Any, Optional, overload
 from collections.abc import Iterator
+from typing import Any, Callable, Optional, TypeVar, overload
+
+from .base import Entity, World
 
 __all__ = [
     "Query",
@@ -52,6 +53,8 @@ Trait = TypeVar("Trait")
 _T1 = TypeVar("_T1")
 _T2 = TypeVar("_T2")
 _T3 = TypeVar("_T3")
+_T4 = TypeVar("_T4")
+_T5 = TypeVar("_T5")
 R = TypeVar("R")
 
 
@@ -139,6 +142,33 @@ def entity_product(
 ) -> Iterator[tuple[tuple[Entity, ...], tuple[tuple[_T1, _T2, _T3], ...]]]: ...
 
 
+@overload
+def entity_product(
+    world: World,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    tags: Optional[set[str]] = None,
+    repeat: int = 1,
+) -> Iterator[tuple[tuple[Entity, ...], tuple[tuple[_T1, _T2, _T3, _T4], ...]]]: ...
+
+
+@overload
+def entity_product(
+    world: World,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    trait_5: type[_T5],
+    tags: Optional[set[str]] = None,
+    repeat: int = 1,
+) -> Iterator[
+    tuple[tuple[Entity, ...], tuple[tuple[_T1, _T2, _T3, _T4, _T5], ...]]
+]: ...
+
+
 def entity_product(
     world: World,
     *queries: type[Trait] | Query,
@@ -208,6 +238,31 @@ def trait_product(
 ) -> Iterator[tuple[tuple[_T1, _T2, _T3], ...]]: ...
 
 
+@overload
+def trait_product(
+    world: World,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    tags: Optional[set[str]] = None,
+    repeat: int = 1,
+) -> Iterator[tuple[tuple[_T1, _T2, _T3, _T4], ...]]: ...
+
+
+@overload
+def trait_product(
+    world: World,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    trait_5: type[_T5],
+    tags: Optional[set[str]] = None,
+    repeat: int = 1,
+) -> Iterator[tuple[tuple[_T1, _T2, _T3, _T4, _T5], ...]]: ...
+
+
 def trait_product(
     world: World,
     *queries: type[Trait] | Query,
@@ -248,7 +303,7 @@ def entity_permutations(
 def entity_permutations(
     world: World,
     r: int,
-    t1: type[_T1],
+    trait_1: type[_T1],
     trait_2: type[_T2],
     tags: Optional[set[str]] = None,
 ) -> Iterator[tuple[tuple[Entity, ...], tuple[tuple[_T1, _T2], ...]]]: ...
@@ -263,6 +318,33 @@ def entity_permutations(
     trait_3: type[_T3],
     tags: Optional[set[str]] = None,
 ) -> Iterator[tuple[tuple[Entity, ...], tuple[tuple[_T1, _T2, _T3], ...]]]: ...
+
+
+@overload
+def entity_permutations(
+    world: World,
+    r: int,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[tuple[Entity, ...], tuple[tuple[_T1, _T2, _T3, _T4], ...]]]: ...
+
+
+@overload
+def entity_permutations(
+    world: World,
+    r: int,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    trait_5: type[_T5],
+    tags: Optional[set[str]] = None,
+) -> Iterator[
+    tuple[tuple[Entity, ...], tuple[tuple[_T1, _T2, _T3, _T4, _T5], ...]]
+]: ...
 
 
 def entity_permutations(
@@ -315,6 +397,31 @@ def trait_permutations(
 ) -> Iterator[tuple[tuple[_T1, _T2, _T3], ...]]: ...
 
 
+@overload
+def trait_permutations(
+    world: World,
+    r: int,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[tuple[_T1, _T2, _T3, _T4], ...]]: ...
+
+
+@overload
+def trait_permutations(
+    world: World,
+    r: int,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    trait_5: type[_T5],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[tuple[_T1, _T2, _T3, _T4, _T5], ...]]: ...
+
+
 def trait_permutations(
     world: World, r: int, *traits: type[Trait], tags: Optional[set[str]] = None
 ) -> Iterator[tuple[tuple[Trait, ...], ...]]:
@@ -363,6 +470,33 @@ def entity_combinations(
     trait_3: type[_T3],
     tags: Optional[set[str]] = None,
 ) -> Iterator[tuple[tuple[Entity, ...], tuple[tuple[_T1, _T2, _T3], ...]]]: ...
+
+
+@overload
+def entity_combinations(
+    world: World,
+    r: int,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[tuple[Entity, ...], tuple[tuple[_T1, _T2, _T3, _T4], ...]]]: ...
+
+
+@overload
+def entity_combinations(
+    world: World,
+    r: int,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    trait_5: type[_T5],
+    tags: Optional[set[str]] = None,
+) -> Iterator[
+    tuple[tuple[Entity, ...], tuple[tuple[_T1, _T2, _T3, _T4, _T5], ...]]
+]: ...
 
 
 def entity_combinations(
@@ -417,6 +551,31 @@ def trait_combinations(
 ) -> Iterator[tuple[tuple[_T1, _T2, _T3], ...]]: ...
 
 
+@overload
+def trait_combinations(
+    world: World,
+    r: int,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[tuple[_T1, _T2, _T3, _T4], ...]]: ...
+
+
+@overload
+def trait_combinations(
+    world: World,
+    r: int,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    trait_5: type[_T5],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[tuple[_T1, _T2, _T3, _T4, _T5], ...]]: ...
+
+
 def trait_combinations(
     world: World, r: int, *traits: type[Trait], tags: Optional[set[str]] = None
 ) -> Iterator[tuple[tuple[Trait, ...] | Trait, ...]]:
@@ -465,6 +624,33 @@ def entity_combinations_with_replacement(
     trait_3: type[_T3],
     tags: Optional[set[str]] = None,
 ) -> Iterator[tuple[tuple[Entity, ...], tuple[tuple[_T1, _T2, _T3], ...]]]: ...
+
+
+@overload
+def entity_combinations_with_replacement(
+    world: World,
+    r: int,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[tuple[Entity, ...], tuple[tuple[_T1, _T2, _T3, _T4], ...]]]: ...
+
+
+@overload
+def entity_combinations_with_replacement(
+    world: World,
+    r: int,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    trait_5: type[_T5],
+    tags: Optional[set[str]] = None,
+) -> Iterator[
+    tuple[tuple[Entity, ...], tuple[tuple[_T1, _T2, _T3, _T4, _T5], ...]]
+]: ...
 
 
 def entity_combinations_with_replacement(
@@ -522,6 +708,31 @@ def trait_combinations_with_replacement(
 ) -> Iterator[tuple[tuple[_T1, _T2, _T3], ...]]: ...
 
 
+@overload
+def trait_combinations_with_replacement(
+    world: World,
+    r: int,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[tuple[_T1, _T2, _T3, _T4], ...]]: ...
+
+
+@overload
+def trait_combinations_with_replacement(
+    world: World,
+    r: int,
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    trait_5: type[_T5],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[tuple[_T1, _T2, _T3, _T4, _T5], ...]]: ...
+
+
 def trait_combinations_with_replacement(
     world: World, r: int, *traits: type[Trait], tags: Optional[set[str]] = None
 ) -> Iterator[tuple[tuple[Trait, ...] | Trait, ...]]:
@@ -576,6 +787,31 @@ def entity_filter(
     trait_3: type[_T3],
     tags: Optional[set[str]] = None,
 ) -> Iterator[tuple[Entity, tuple[_T1, _T2, _T3]]]: ...
+
+
+@overload
+def entity_filter(
+    world: World,
+    predicate: Callable[[Entity, tuple[Trait, ...]], bool],
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[Entity, tuple[_T1, _T2, _T3, _T4]]]: ...
+
+
+@overload
+def entity_filter(
+    world: World,
+    predicate: Callable[[Entity, tuple[Trait, ...]], bool],
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    trait_5: type[_T5],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[Entity, tuple[_T1, _T2, _T3, _T4, _T5]]]: ...
 
 
 def entity_filter(
@@ -636,6 +872,31 @@ def trait_filter(
 ) -> Iterator[tuple[_T1, _T2, _T3]]: ...
 
 
+@overload
+def trait_filter(
+    world: World,
+    predicate: Callable[[tuple[Trait, ...]], bool],
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[_T1, _T2, _T3, _T4]]: ...
+
+
+@overload
+def trait_filter(
+    world: World,
+    predicate: Callable[[tuple[Trait, ...]], bool],
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    trait_5: type[_T5],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[_T1, _T2, _T3, _T4, _T5]]: ...
+
+
 def trait_filter(
     world: World,
     predicate: Callable[[tuple[Trait, ...]], bool],
@@ -692,6 +953,31 @@ def entity_groupby(
     trait_3: type[_T3],
     tags: Optional[set[str]] = None,
 ) -> Iterator[tuple[Any, Iterator[tuple[Entity, tuple[_T1, _T2, _T3]]]]]: ...
+
+
+@overload
+def entity_groupby(
+    world: World,
+    key: Callable[[Entity, tuple[Trait, ...]], Any],
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[Any, Iterator[tuple[Entity, tuple[_T1, _T2, _T3, _T4]]]]]: ...
+
+
+@overload
+def entity_groupby(
+    world: World,
+    key: Callable[[Entity, tuple[Trait, ...]], Any],
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    trait_5: type[_T5],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[Any, Iterator[tuple[Entity, tuple[_T1, _T2, _T3, _T4, _T5]]]]]: ...
 
 
 def entity_groupby(
@@ -753,6 +1039,31 @@ def trait_groupby(
     trait_3: type[_T3],
     tags: Optional[set[str]] = None,
 ) -> Iterator[tuple[Any, Iterator[tuple[_T1, _T2, _T3]]]]: ...
+
+
+@overload
+def trait_groupby(
+    world: World,
+    key: Callable[[tuple[Trait, ...]], Any],
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[Any, Iterator[tuple[_T1, _T2, _T3, _T4]]]]: ...
+
+
+@overload
+def trait_groupby(
+    world: World,
+    key: Callable[[tuple[Trait, ...]], Any],
+    trait_1: type[_T1],
+    trait_2: type[_T2],
+    trait_3: type[_T3],
+    trait_4: type[_T4],
+    trait_5: type[_T5],
+    tags: Optional[set[str]] = None,
+) -> Iterator[tuple[Any, Iterator[tuple[_T1, _T2, _T3, _T4, _T5]]]]: ...
 
 
 def trait_groupby(
