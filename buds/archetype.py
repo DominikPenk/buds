@@ -14,9 +14,10 @@ Exports:
     ArchetypeWorld
 """
 
-from .base import World, Entity, is_trait_type, EntityNotFoundError, TraitNotFoundError
-from typing import TypeVar, NamedTuple, TypeAlias
-from collections.abc import Iterator, Iterable
+from collections.abc import Iterable, Iterator
+from typing import NamedTuple, TypeAlias, TypeVar
+
+from .base import Entity, EntityNotFoundError, TraitNotFoundError, World, is_trait_type
 
 T = TypeVar("T")
 
@@ -317,4 +318,5 @@ class ArchetypeWorld(World):
             for entity_id, trait_dict in arch.get_traits():
                 entity = Entity(entity_id, self)
                 traits = tuple(trait_dict[t] for t in trait_types)
+                yield entity, traits
                 yield entity, traits

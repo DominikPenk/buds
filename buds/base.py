@@ -18,13 +18,13 @@ Exports:
 """
 
 from __future__ import annotations
-import abc
-from dataclasses import dataclass
-from typing import TypeVar, Optional, overload
-from collections.abc import Iterator
-from collections import defaultdict
-import inspect
 
+import abc
+import inspect
+from collections import defaultdict
+from collections.abc import Iterator
+from dataclasses import dataclass
+from typing import Optional, TypeVar, dataclass_transform, overload
 
 Seed = TypeVar("Seed")
 T = TypeVar("T")
@@ -61,7 +61,8 @@ class TraitNotFoundError(Exception):
     pass
 
 
-def trait(cls: T) -> T:
+@dataclass_transform()
+def trait(cls: type[T]) -> type[T]:
     """Marks a dataclass as a trait type within the ECS system.
 
     This decorator converts the class into a **dataclass** and flags it
@@ -107,6 +108,7 @@ def is_trait_type(cls: type) -> bool:
     return inspect.isclass(cls) and hasattr(cls, "__is_trait")
 
 
+@dataclass_transform()
 class Trait:
     """Base class for defining ECS traits.
 
@@ -412,7 +414,7 @@ class Entity:
             world: The world instance this entity belongs to.
         """
         self.id = id
-        self.world = world
+        self.world: Optional[World] = world
 
     def __repr__(self) -> str:
         return f"<Entity({self.id})>"
@@ -451,6 +453,7 @@ class Entity:
             EntityNotFoundError: Inherited from [`World.add_trait`][buds.base.World.add_trait].
             TypeError: Inherited from [`World.add_trait`][buds.base.World.add_trait].
         """
+        assert self.world is not None, "Cannot add trait to dead entity"
         self.world.add_trait(self.id, trait)
         return self
 
@@ -467,6 +470,7 @@ class Entity:
             EntityNotFoundError: Inherited from [`World.remove_trait`][buds.base.World.remove_trait].
             TraitNotFoundError: Inherited from [`World.remove_trait`][buds.base.World.remove_trait].
         """
+        assert self.world is not None, "Cannot add trait to dead entity"
         self.world.remove_trait(self.id, trait_type)
         return self
 
@@ -483,6 +487,7 @@ class Entity:
             EntityNotFoundError: Inherited from [`World.has_tags`][buds.base.World.has_tags].
             TypeError: Inherited from [`World.has_tags`][buds.base.World.has_tags].
         """
+        assert self.world is not None, "Cannot add trait to dead entity"
         return self.world.has_trait(self.id, trait_type)
 
     def add_tags(self, *tags: str) -> Entity:
@@ -498,6 +503,7 @@ class Entity:
             EntityNotFoundError: Inherited from [`World.add_tags`][buds.base.World.add_tags].
             TypeError: Inherited from [`World.add_tags`][buds.base.World.add_tags].
         """
+        assert self.world is not None, "Cannot add trait to dead entity"
         self.world.add_tags(self.id, *tags)
         return self
 
@@ -510,6 +516,7 @@ class Entity:
         Returns:
             The entity itself, allowing method chaining.
         """
+        assert self.world is not None, "Cannot add trait to dead entity"
         self.world.remove_tags(self.id, *tags)
         return self
 
@@ -522,6 +529,7 @@ class Entity:
         Returns:
             True if all tags are present, False otherwise.
         """
+        assert self.world is not None, "Cannot add trait to dead entity"
         return self.world.has_tags(self.id, *tags)
 
     def delete(self) -> None:
@@ -533,6 +541,7 @@ class Entity:
         Raises:
             EntityNotFoundError: Inherited from [`World.delete_entity`][buds.base.World.delete_entity].
         """
+        assert self.world is not None, "Cannot add trait to dead entity"
         self.world.delete_entity(self.id)
         self.world = None
 
