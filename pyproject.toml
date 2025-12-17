@@ -26,6 +26,23 @@ docs = [
     "mkdocs-material~=9.6",
     "mkdocstrings~=0.3",
 ]
-extras=[
-    "numpy~=2.3.4"
+extras = [
+    "numpy~=2.3.4",
+]
+
+# Optional group that installs everything needed to run the test-suite
+optional = [
+    "pytest>=7.0",
+    "numpy~=2.3.4",
+    "pytest-cov>=4.0",
+]
+
+# A convenience "all" extra that installs all other optional packages
+all = [
+    "mkdocs~=1.6",
+    "mkdocs-material~=9.6",
+    "mkdocstrings~=0.3",
+    "numpy~=2.3.4",
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
 ]

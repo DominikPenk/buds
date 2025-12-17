@@ -1,10 +1,20 @@
-import numpy as np
-from typing import Any, get_origin, get_args, Annotated, Generic, Optional, Hashable
-from dataclasses import fields, is_dataclass
-from typing import TypeVar
-from ..base import is_trait_type, Entity
-from ..archetype import ArchetypeKey, ArchetypeWorld, ArcheType
 from collections.abc import Iterable, Iterator
+from dataclasses import fields, is_dataclass
+from typing import (
+    Annotated,
+    Any,
+    Generic,
+    Hashable,
+    Optional,
+    TypeVar,
+    get_args,
+    get_origin,
+)
+
+import numpy as np
+
+from ..archetype import ArcheType, ArchetypeKey, ArchetypeWorld
+from ..base import Entity, is_trait_type
 
 __all__ = ["NumpyArchetypeWorld"]
 
@@ -304,7 +314,8 @@ class NumpyArcheType(ArcheType):
         for trait_type, storage in self.trait_data.items():
             vals = {
                 f: storage[f][last_index].item()
-                if hasattr(storage[f][last_index], "item")
+                if isinstance(storage[f][last_index], np.ndarray)
+                and storage[f][last_index].ndim == 0
                 else storage[f][last_index]
                 for f in storage.dtype.names
             }
