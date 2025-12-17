@@ -24,7 +24,7 @@ import inspect
 from collections import defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Optional, TypeVar, dataclass_transform, overload
+from typing import Iterable, Optional, TypeVar, dataclass_transform, overload
 
 Seed = TypeVar("Seed")
 T = TypeVar("T")
@@ -397,6 +397,11 @@ class World(abc.ABC):
             TypeError: If any trait_types are not valid trait types or if any `tags` are not strings.
         """
         yield from map(lambda r: r[1], self.get_entities(*trait_types, tags=tags))
+
+    def empose_order(self, order: Iterable[int], *traits: type[Trait_]) -> None:
+        raise NotImplementedError(
+            f"World type {type(self)} does not support trait ordering"
+        )
 
 
 class Entity:

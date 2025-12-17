@@ -1,15 +1,6 @@
 from collections.abc import Iterable, Iterator
 from dataclasses import fields, is_dataclass
-from typing import (
-    Annotated,
-    Any,
-    Generic,
-    Hashable,
-    Optional,
-    TypeVar,
-    get_args,
-    get_origin,
-)
+from typing import Annotated, Any, Generic, Optional, TypeVar, get_args, get_origin
 
 import numpy as np
 
@@ -353,6 +344,16 @@ class NumpyArcheType(ArcheType):
 
     def get_trait_data(self, trait_type: type[T]) -> np.ndarray | None:
         return self.trait_data.get(trait_type, None)
+
+    def empose_order(self, order: Iterable[int]) -> None:
+        order = list(order)
+        n = len(order)
+        if n != len(self):
+            raise RuntimeError(f"Invalid order, expected {len(self)} entries, got {n}")
+
+        self.entity_ids = [self.entity_ids[i] for i in order]
+        for t in self.trait_data:
+            self.trait_data[t][:n] = self.trait_data[t][order]
 
     @property
     def capacity(self) -> int:

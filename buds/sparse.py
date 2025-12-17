@@ -12,17 +12,18 @@ Exports:
     SparseWorld
 """
 
+from collections import defaultdict
+from collections.abc import Iterator
+from typing import TypeVar
+
 from .base import (
-    World,
     Entity,
-    is_trait,
-    is_trait_type,
     EntityNotFoundError,
     TraitNotFoundError,
+    World,
+    is_trait,
+    is_trait_type,
 )
-from typing import TypeVar
-from collections.abc import Iterator
-from collections import defaultdict
 
 T = TypeVar("T")
 

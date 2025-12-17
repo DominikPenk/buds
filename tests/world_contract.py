@@ -1,6 +1,7 @@
 # tests/ecs_world_contract.py
 import pytest
-from buds.base import trait, World, EntityNotFoundError, TraitNotFoundError, Entity
+
+from buds.base import Entity, EntityNotFoundError, TraitNotFoundError, World, trait
 
 
 # Shared trait types used by the contract tests
@@ -381,3 +382,100 @@ class WorldContract:
                     },
                 )
             )
+
+    def test_empose_order_contract(self):
+        """Contract test for optional empose_order API.
+
+        If a World implementation does not provide empose_order it may raise
+        NotImplementedError or AttributeError; in that case this test is skipped.
+
+        Otherwise we assert that calling empose_order on a simple archetype
+        reorders entities as expected.
+        """
+        # Create two entities with the same archetype
+        e1 = self.world.create_entity(Position(0, 0), Velocity(0.0, 0.0))
+        e2 = self.world.create_entity(Position(1, 1), Velocity(1.0, 1.0))
+
+        # Try calling - allow NotImplementedError to indicate optional API
+        try:
+            # Attempt to reverse order; some worlds may expect trait types too.
+            self.world.empose_order([1, 0], Position, Velocity)
+        except NotImplementedError:
+            pytest.skip("empose_order not implemented by this World")
+
+        # Verify ordering via get_entities (this is part of the World contract)
+        ordered = list(self.world.get_entities(Position, Velocity))
+
+        # We expect two results and that their entity ids are in reversed order
+        assert len(ordered) == 2
+        first_ent, (first_pos, first_vel) = ordered[0]
+        second_ent, (second_pos, second_vel) = ordered[1]
+
+        # Check entity ids
+        assert int(first_ent) == e2.id
+        assert int(second_ent) == e1.id
+
+        # And also verify the trait data moved with the entities
+        assert first_pos.x == pytest.approx(1)
+        assert first_pos.y == pytest.approx(1)
+        assert first_vel.dx == pytest.approx(1.0)
+        assert first_vel.dy == pytest.approx(1.0)
+
+        assert second_pos.x == pytest.approx(0)
+        assert second_pos.y == pytest.approx(0)
+        assert second_vel.dx == pytest.approx(0.0)
+        assert second_vel.dy == pytest.approx(0.0)
+
+    def test_empose_order_requires_trait_types(self):
+        """When trait types are provided they must all be trait classes.
+
+        If empose_order is not implemented this test is skipped.
+        """
+        # create a pair so archetype exists
+        self.world.create_entity(Position(0, 0), Velocity(0.0, 0.0))
+        self.world.create_entity(Position(1, 1), Velocity(1.0, 1.0))
+
+        try:
+            # Use a normal class (not decorated with @trait) to trigger the ValueError
+            class NotATrait:
+                pass
+
+            with pytest.raises(ValueError):
+                self.world.empose_order([0, 1], NotATrait)
+        except NotImplementedError:
+            pytest.skip("empose_order not implemented by this World")
+
+    def test_empose_order_invalid_order_length_raises(self):
+        """Order length must match the number of entities in the archetype.
+
+        If empose_order is not implemented this test is skipped.
+        """
+        e1 = self.world.create_entity(Position(0, 0), Velocity(0.0, 0.0))
+        e2 = self.world.create_entity(Position(1, 1), Velocity(1.0, 1.0))
+
+        try:
+            # Provide an order of wrong length (only one entry for two entities)
+            with pytest.raises(RuntimeError):
+                self.world.empose_order([0], Position, Velocity)
+        except NotImplementedError:
+            pytest.skip("empose_order not implemented by this World")
+
+    def test_empose_order_no_matching_entities_is_noop(self):
+        """Calling empose_order for trait types with no matching archetype should be a no-op.
+
+        The call should not raise; queries for those trait types should remain empty.
+        """
+        # Create entities that do NOT include the 'Velocity' trait
+        self.world.create_entity(Position(0, 0))
+        self.world.create_entity(Position(1, 1))
+
+        try:
+            # There is no archetype composed of only Velocity in this world; calling
+            # empose_order should not raise and should leave queries unchanged.
+            self.world.empose_order([], Velocity)
+        except NotImplementedError:
+            pytest.skip("empose_order not implemented by this World")
+
+        # Ensure there are still no entities matching Velocity
+        results = list(self.world.get_entities_from_traits(Velocity))
+        assert results == []

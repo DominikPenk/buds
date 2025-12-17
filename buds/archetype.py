@@ -131,6 +131,17 @@ class ArcheType:
                 {t_type: t_store[idx] for t_type, t_store in self.trait_data.items()},
             )
 
+    def empose_order(self, order: Iterable[int]) -> None:
+        order = list(order)
+        if len(order) != len(self):
+            raise RuntimeError(
+                f"Invalid order, expected {len(self)} entries, got {len(order)}"
+            )
+
+        self.entity_ids = [self.entity_ids[i] for i in order]
+        for t in self.trait_data:
+            self.trait_data[t] = [self.trait_data[t][i] for i in order]
+
 
 class ArchetypeWorld(World):
     """A world implementation using archetype-based storage.
@@ -319,4 +330,13 @@ class ArchetypeWorld(World):
                 entity = Entity(entity_id, self)
                 traits = tuple(trait_dict[t] for t in trait_types)
                 yield entity, traits
-                yield entity, traits
+
+    def empose_order(self, order: Iterable[int], *trait_types: type) -> None:
+        if not all(is_trait_type(t) for t in trait_types):
+            raise ValueError("All trait_types must be traits")
+
+        key = ArcheType.get_canonical_order(trait_types)
+        if key not in self._archetypes:
+            return
+
+        self._archetypes[key].empose_order(order)
