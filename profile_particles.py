@@ -3,6 +3,7 @@ import math
 import random
 from dataclasses import dataclass
 from typing import Literal
+
 import numpy as np
 
 import buds
@@ -24,10 +25,15 @@ class Arguments:
     size: tuple[int, int]
 
 
-@buds.trait
-class Particle:
-    pos: buds.extras.FixedSizeArray[(2,), float]
-    vel: buds.extras.FixedSizeArray[(2,), float]
+class Payload:
+    def __init__(self):
+        self.dummy = "I am a payload"
+
+
+class Particle(buds.Trait):
+    pos: buds.extras.Vector2
+    vel: buds.extras.Vector2
+    payload: Payload
     radius: float
 
 
@@ -63,6 +69,7 @@ def main(args: Arguments):
             Particle(
                 np.array([random.uniform(0, width), random.uniform(0, height)]),
                 random_velocity(5),
+                Payload(),
                 7,
             )
         )
@@ -112,8 +119,8 @@ def main(args: Arguments):
 
 if __name__ == "__main__":
     import cProfile
-    import pstats
     import io
+    import pstats
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--num-particles", type=int, default=500)
@@ -132,4 +139,5 @@ if __name__ == "__main__":
     s = io.StringIO()
     ps = pstats.Stats(pr, stream=s).sort_stats("tottime")
     ps.print_stats(20)
+    print(s.getvalue())
     print(s.getvalue())

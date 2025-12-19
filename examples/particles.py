@@ -4,8 +4,9 @@ import random
 from dataclasses import dataclass
 from typing import Literal
 
-import buds
 import numpy as np
+
+import buds
 
 try:
     import buds.extras
@@ -26,10 +27,9 @@ class Arguments:
     size: tuple[int, int]
 
 
-@buds.trait
-class Particle:
-    pos: buds.extras.FixedSizeArray[(2,), float]
-    vel: buds.extras.FixedSizeArray[(2,), float]
+class Particle(buds.Trait):
+    pos: buds.extras.Vector2
+    vel: buds.extras.Vector2
     radius: float
 
 
@@ -117,7 +117,7 @@ def main(args: Arguments):
             p.write_back()
 
         else:
-            for (a,), (b,) in buds.itertools.trait_combinations(world, 2, Particle):
+            for a, b in buds.itertools.trait_combinations(world, 2, Particle):
                 dpos = a.pos - b.pos
                 dist = math.hypot(dpos[0], dpos[1])
                 min_dist = a.radius + b.radius
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--num-particles", type=int, default=500)
     parser.add_argument(
-        "--world-type", choices=["sparse", "archetypes", "numpy"], default="archetypes"
+        "--world-type", choices=["sparse", "archetypes", "numpy"], default="numpy"
     )
     parser.add_argument("--size", nargs=2, type=int, default=(600, 600))
     parser.add_argument("--fps", type=int, default=60)

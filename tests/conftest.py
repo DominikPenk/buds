@@ -1,9 +1,9 @@
 # tests/conftest.py
 import pytest
-from buds.base import trait
-from buds.sparse import SparseWorld
+
 from buds.archetype import ArchetypeWorld
 from buds.extras import NumpyArchetypeWorld
+from buds.sparse import SparseWorld
 
 WORLD_IMPLEMENTATIONS = [
     SparseWorld,

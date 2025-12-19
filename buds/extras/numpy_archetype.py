@@ -1,6 +1,16 @@
 from collections.abc import Iterable, Iterator
-from dataclasses import fields, is_dataclass
-from typing import Annotated, Any, Generic, Optional, TypeVar, get_args, get_origin
+from dataclasses import dataclass, fields
+from typing import (
+    Annotated,
+    Any,
+    Callable,
+    Generic,
+    Optional,
+    TypeAlias,
+    TypeVar,
+    get_args,
+    get_origin,
+)
 
 import numpy as np
 
@@ -14,32 +24,17 @@ _view_cache: dict[type, type] = dict()
 _vector_view_cache: dict[type, type] = dict()
 
 
-class FixedSizeArrayMeta(type):
-    def __getitem__(cls, item: Any):
-        # Support shapes and dtypes
-        if isinstance(item, tuple):
-            if len(item) == 1:
-                shape, dtype = item[0], np.float32
-            elif len(item) == 2:
-                shape, dtype = item
-            else:
-                raise TypeError("FixedSizeArray[...] must be of form [(shape, dtype?)]")
-        else:
-            shape, dtype = (item,), np.float32
-
-        # Return a type alias with metadata attached
-        return Annotated[np.ndarray, {"shape": shape, "dtype": np.dtype(dtype)}]
+@dataclass
+class NumpyArrayMetaInfo:
+    shape: tuple[int, ...] | int
+    dtype: np.dtype = np.dtype(np.float32)
+    validator: Optional[Callable[[np.ndarray], None]] = None
 
 
-class FixedSizeArray(np.ndarray, metaclass=FixedSizeArrayMeta):
-    """Typing helper for fixed-size numpy arrays.
-
-    Example:
-        vec: FixedSizeArray[(3,), np.float32]
-        mat: FixedSizeArray[(4, 4)]
-    """
-
-    pass
+Vector2: TypeAlias = Annotated[np.ndarray, NumpyArrayMetaInfo((2,))]
+Vector3: TypeAlias = Annotated[np.ndarray, NumpyArrayMetaInfo((3,))]
+Matrix2x2: TypeAlias = Annotated[np.ndarray, NumpyArrayMetaInfo((2, 2))]
+Matrix3x3: TypeAlias = Annotated[np.ndarray, NumpyArrayMetaInfo((3, 3))]
 
 
 class VectorizedTraitView(Generic[T]):
@@ -71,14 +66,14 @@ class VectorizedTraitView(Generic[T]):
         def getter(self) -> np.ndarray:
             return self._data[field_name]
 
-        def setter(self, value: np.ndarray) -> np.ndarray:
+        def setter(self, value: np.ndarray) -> None:
             assert value.shape == self._data[field_name].shape
             self._data[field_name] = value
 
         return property(getter, setter)
 
 
-def _make_trait_view_class(trait_type: type[T]) -> type[T]:
+def _make_trait_view_class(trait_type: type[T]) -> type:
     if trait_type in _view_cache:
         return _view_cache[trait_type]
 
@@ -188,8 +183,17 @@ def numpy_dtype_for_type(py_type: type[Any]) -> np.dtype:
         base, *meta = args
         if base is np.ndarray:
             # Uniform metadata handling
-            if len(meta) == 1 and isinstance(meta[0], dict):
-                raw_shape = meta[0].get("shape", ())
+            if len(meta) == 1 and isinstance(meta[0], NumpyArrayMetaInfo):
+                raw_shape = meta[0].shape
+                if isinstance(raw_shape, int):
+                    shape = (raw_shape,)
+                elif isinstance(raw_shape, tuple):
+                    shape = raw_shape
+                else:
+                    shape = ()  # Default or error handling for invalid types
+                dtype = np.dtype(meta[0].dtype)
+            elif len(meta) == 1 and isinstance(meta[0], dict):
+                raw_shape = meta[0].get("shape")
                 if isinstance(raw_shape, int):
                     shape = (raw_shape,)
                 elif isinstance(raw_shape, tuple):
@@ -215,9 +219,13 @@ def numpy_dtype_for_type(py_type: type[Any]) -> np.dtype:
 
 def _build_trait_dtype(trait_type: type[T]) -> np.dtype:
     """Return a numpy dtype for a single trait dataclass (flat fields named exactly as dataclass fields)."""
-    if not is_dataclass(trait_type):
-        raise TypeError("build_trait_dtype expects a dataclass trait type")
-    field_defs = [(f.name, numpy_dtype_for_type(f.type)) for f in fields(trait_type)]
+    if not hasattr(trait_type, "get_field_info"):
+        raise TypeError(
+            "build_trait_dtype expects a type with a class-level function 'get_field_info()'"
+        )
+    field_defs = [
+        (name, numpy_dtype_for_type(type)) for name, type in trait_type.get_field_info()
+    ]
     return np.dtype(field_defs)
 
 

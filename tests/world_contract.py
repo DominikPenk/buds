@@ -1,18 +1,16 @@
 # tests/ecs_world_contract.py
 import pytest
 
-from buds.base import Entity, EntityNotFoundError, TraitNotFoundError, World, trait
+from buds.base import Entity, EntityNotFoundError, Trait, TraitNotFoundError, World
 
 
 # Shared trait types used by the contract tests
-@trait
-class Position:
+class Position(Trait):
     x: int
     y: int
 
 
-@trait
-class Velocity:
+class Velocity(Trait):
     dx: float
     dy: float
 

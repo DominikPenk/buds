@@ -23,8 +23,8 @@ import abc
 import inspect
 from collections import defaultdict
 from collections.abc import Iterator
-from dataclasses import dataclass
-from typing import Iterable, Optional, TypeVar, dataclass_transform, overload
+from dataclasses import dataclass, fields
+from typing import Any, Iterable, Optional, TypeVar, dataclass_transform, overload
 
 Seed = TypeVar("Seed")
 T = TypeVar("T")
@@ -34,7 +34,6 @@ TRAIT_HINT = "__is_trait"
 
 __all__ = [
     "Entity",
-    "trait",
     "is_trait",
     "is_trait_type",
     "World",
@@ -61,29 +60,6 @@ class TraitNotFoundError(Exception):
     pass
 
 
-@dataclass_transform()
-def trait(cls: type[T]) -> type[T]:
-    """Marks a dataclass as a trait type within the ECS system.
-
-    This decorator converts the class into a **dataclass** and flags it
-    as a recognized ECS trait.
-
-    Args:
-        cls: The class to mark as a trait. Must be a class type.
-
-    Returns:
-        The same class, transformed into a dataclass and marked as a trait.
-    """
-    cls = dataclass(cls)
-    setattr(cls, TRAIT_HINT, True)
-    return cls
-
-
-def make_trate_type(cls: type[T]) -> type[T]:
-    setattr(cls, TRAIT_HINT, True)
-    return cls
-
-
 def is_trait(obj: object) -> bool:
     """Checks whether an object instance is marked as a trait.
 
@@ -93,7 +69,7 @@ def is_trait(obj: object) -> bool:
     Returns:
         True if the object is a trait instance, False otherwise.
     """
-    return hasattr(obj, "__is_trait")
+    return isinstance(obj, Trait) or hasattr(obj, "__is_trait")
 
 
 def is_trait_type(cls: type) -> bool:
@@ -105,7 +81,7 @@ def is_trait_type(cls: type) -> bool:
     Returns:
         True if the class is a trait type, False otherwise.
     """
-    return inspect.isclass(cls) and hasattr(cls, "__is_trait")
+    return inspect.isclass(cls) and (cls is Trait or hasattr(cls, "__is_trait"))
 
 
 @dataclass_transform()
@@ -117,7 +93,14 @@ class Trait:
 
     def __init_subclass__(cls):
         """Automatically marks all subclasses as ECS traits."""
-        return trait(cls)
+        # Mark subclass as a trait type so is_trait_type can detect it.
+        setattr(cls, TRAIT_HINT, True)
+        return dataclass(cls)
+
+    @classmethod
+    def get_field_info(cls) -> Iterator[tuple[str, type[Any]]]:
+        for f in fields(cls):
+            yield f.name, f.type
 
 
 _Trait = TypeVar("_Trait")
@@ -398,7 +381,7 @@ class World(abc.ABC):
         """
         yield from map(lambda r: r[1], self.get_entities(*trait_types, tags=tags))
 
-    def empose_order(self, order: Iterable[int], *traits: type[Trait_]) -> None:
+    def empose_order(self, order: Iterable[int], *traits: type[_Trait]) -> None:
         raise NotImplementedError(
             f"World type {type(self)} does not support trait ordering"
         )

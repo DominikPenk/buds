@@ -7,6 +7,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Tutorial: tutorial.md
   - API:
       - Core: api/base.md
       - System: api/system.md

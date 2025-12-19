@@ -1,25 +1,22 @@
 import pytest
-from buds.seed import Seed
-from buds.base import trait
 
+from buds.base import Trait
+from buds.seed import Seed
 
 # --- Shared Traits -----------------------------------------------------
 
 
-@trait
-class Position:
+class Position(Trait):
     x: int
     y: int
 
 
-@trait
-class Velocity:
+class Velocity(Trait):
     dx: float
     dy: float
 
 
-@trait
-class Health:
+class Health(Trait):
     hp: int
 
 

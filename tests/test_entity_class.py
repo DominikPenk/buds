@@ -1,6 +1,6 @@
 import pytest
 
-from buds.base import Entity, World, trait
+from buds.base import Entity, Trait
 
 
 class DummyWorld:
@@ -93,8 +93,7 @@ def test_le(e1: Entity, e2: Entity, expected: bool):
 # ---------------------------------------------------------------------------
 # Test convenience methods
 # ---------------------------------------------------------------------------
-@trait
-class TestTrait:
+class TestTrait(Trait):
     pass
 
 

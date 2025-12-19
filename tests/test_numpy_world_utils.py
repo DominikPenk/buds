@@ -1,15 +1,16 @@
-import pytest
-import numpy as np
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 
+import numpy as np
+import pytest
+
+from buds.base import Trait
 from buds.extras.numpy_archetype import (
-    numpy_dtype_for_type,
-    _build_trait_dtype,
-    _make_trait_view_class,
-    _make_trait_vectorized_view_class,
     FixedSizeArray,
+    _build_trait_dtype,
+    _make_trait_vectorized_view_class,
+    _make_trait_view_class,
+    numpy_dtype_for_type,
 )
-from buds.base import trait, is_trait_type
 
 
 # -----------------------------------------------------------------------------
@@ -17,8 +18,7 @@ from buds.base import trait, is_trait_type
 # -----------------------------------------------------------------------------
 @pytest.fixture
 def SimpleTrait():
-    @trait
-    class Simple:
+    class Simple(Trait):
         x: int
         y: float
 
@@ -27,8 +27,7 @@ def SimpleTrait():
 
 @pytest.fixture
 def NestedTrait():
-    @trait
-    class Nested:
+    class Nested(Trait):
         a: tuple[int, float]
         b: bool
 

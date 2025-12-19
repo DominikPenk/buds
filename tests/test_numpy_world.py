@@ -1,9 +1,8 @@
 # tests/test_sparse_world.py
 import numpy as np
-import pytest
 
-from buds import trait
-from buds.extras.numpy_archetype import FixedSizeArray, NumpyArchetypeWorld
+from buds.base import Trait
+from buds.extras.numpy_archetype import Matrix2x2, NumpyArchetypeWorld
 from tests.world_contract import Position, Velocity, WorldContract
 
 
@@ -81,9 +80,8 @@ class TestNumpyWorld(WorldContract):
         assert "dy" in vel_view._data.dtype.names
 
     def test_fixed_size_array_dtype_and_resize_behavior(self):
-        @trait
-        class Matrix:
-            m: FixedSizeArray[(2, 2), np.float32]
+        class Matrix(Trait):
+            m: Matrix2x2
 
         world = self.make_world()
 

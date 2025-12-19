@@ -1,36 +1,36 @@
 import pytest
-from buds.base import trait, Entity
+
+from buds.base import Entity, Trait
 from buds.itertools import (
     Query,
     _resolve_queries,
-    entity_product,
-    entity_permutations,
     entity_combinations,
     entity_combinations_with_replacement,
     entity_filter,
     entity_groupby,
+    entity_permutations,
+    entity_product,
     entity_starmap,
-    trait_product,
-    trait_permutations,
     trait_combinations,
     trait_combinations_with_replacement,
     trait_filter,
     trait_groupby,
+    trait_permutations,
+    trait_product,
     trait_starmap,
 )
+
 # ---------------------------------------------------------------------------
 # Shared test trait definitions
 # ---------------------------------------------------------------------------
 
 
-@trait
-class Position:
+class Position(Trait):
     x: int
     y: int
 
 
-@trait
-class Velocity:
+class Velocity(Trait):
     dx: float
     dy: float
 

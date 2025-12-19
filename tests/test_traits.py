@@ -1,8 +1,7 @@
 # tests/test_traits.py
-import pytest
-import inspect
 from dataclasses import is_dataclass
-from buds.base import trait, make_trate_type, is_trait, is_trait_type, Trait, TRAIT_HINT
+
+from buds.base import TRAIT_HINT, Trait, is_trait, is_trait_type
 
 # ----------------------------------------
 # Helper classes for testing
@@ -19,8 +18,7 @@ class NotATraitClass:
 
 
 def test_trait_decorator_marks_dataclass_and_sets_hint():
-    @trait
-    class MyTrait:
+    class MyTrait(Trait):
         x: int
         y: int
 
@@ -38,39 +36,11 @@ def test_trait_decorator_marks_dataclass_and_sets_hint():
 
 
 def test_trait_decorator_preserves_annotations():
-    @trait
-    class MyTrait:
+    class MyTrait(Trait):
         x: int
         y: int
 
     assert MyTrait.__annotations__ == {"x": int, "y": int}
-
-
-# ----------------------------------------
-# make_trate_type tests
-# ----------------------------------------
-
-
-def test_make_trate_type_marks_class():
-    class MyTraitClass:
-        x: int
-        y: int
-
-    result = make_trate_type(MyTraitClass)
-    assert result is MyTraitClass
-    assert hasattr(MyTraitClass, TRAIT_HINT)
-    assert getattr(MyTraitClass, TRAIT_HINT) is True
-
-
-def test_make_trate_type_does_not_convert_to_dataclass():
-    class MyTraitClass:
-        x: int
-        y: int
-
-    cls = make_trate_type(MyTraitClass)
-    assert not is_dataclass(
-        cls
-    )  # unlike `trait`, this does not decorate with @dataclass
 
 
 # ----------------------------------------
@@ -79,8 +49,7 @@ def test_make_trate_type_does_not_convert_to_dataclass():
 
 
 def test_is_trait_and_is_trait_type_behavior():
-    @trait
-    class MyTrait:
+    class MyTrait(Trait):
         x: int
         y: int
 

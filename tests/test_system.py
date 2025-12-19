@@ -1,19 +1,18 @@
+import math
+
 import pytest
 
-from buds.system import system, map  # Module you gave
-from buds.base import Entity, trait, World
-import math
+from buds.base import Entity, Trait, World
+from buds.system import map, system  # Module you gave
 
 
 # Shared trait types used by the contract tests
-@trait
-class Position:
+class Position(Trait):
     x: int
     y: int
 
 
-@trait
-class Velocity:
+class Velocity(Trait):
     dx: float
     dy: float
 
