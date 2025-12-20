@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from buds.base import Trait
-from buds.extras.numpy_archetype import (
+from buds.extras.numpy.numpy_archetype import (
     FixedSizeArray,
     _build_trait_dtype,
     _make_trait_vectorized_view_class,

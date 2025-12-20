@@ -23,7 +23,7 @@ import abc
 import inspect
 from collections import defaultdict
 from collections.abc import Iterator
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 from typing import Any, Iterable, Optional, TypeVar, dataclass_transform, overload
 
 Seed = TypeVar("Seed")
@@ -60,6 +60,20 @@ class TraitNotFoundError(Exception):
     pass
 
 
+@dataclass_transform()
+class Trait:
+    """Base class for defining ECS traits.
+
+    Subclasses of `Trait` are automatically marked as traits.
+    """
+
+    def __init_subclass__(cls):
+        """Automatically marks all subclasses as ECS traits."""
+        # Mark subclass as a trait type so is_trait_type can detect it.
+        setattr(cls, TRAIT_HINT, True)
+        return dataclass(cls)
+
+
 def is_trait(obj: object) -> bool:
     """Checks whether an object instance is marked as a trait.
 
@@ -84,23 +98,8 @@ def is_trait_type(cls: type) -> bool:
     return inspect.isclass(cls) and (cls is Trait or hasattr(cls, "__is_trait"))
 
 
-@dataclass_transform()
-class Trait:
-    """Base class for defining ECS traits.
-
-    Subclasses of `Trait` are automatically marked as traits.
-    """
-
-    def __init_subclass__(cls):
-        """Automatically marks all subclasses as ECS traits."""
-        # Mark subclass as a trait type so is_trait_type can detect it.
-        setattr(cls, TRAIT_HINT, True)
-        return dataclass(cls)
-
-    @classmethod
-    def get_field_info(cls) -> Iterator[tuple[str, type[Any]]]:
-        for f in fields(cls):
-            yield f.name, f.type
+def register_trait_base_class(cls: type[Any]):
+    setattr(cls, TRAIT_HINT, True)
 
 
 _Trait = TypeVar("_Trait")

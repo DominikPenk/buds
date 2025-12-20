@@ -13,7 +13,7 @@ from typing import (
 
 import numpy as np
 
-from ...inspect import FieldSchema, UnifiedMetadata
+from ...inspect import FieldSchema, TraitSchema, UnifiedMetadata
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,14 +106,30 @@ def register_adapter(adapter: DtypeAdapter, *, priority: int = 0):
 
 
 @lru_cache(maxsize=512)
-def get_dtype(field: FieldSchema) -> np.dtype:
-    for adapter in _DTYPE_ADAPTERS:
-        dtype = adapter.get_dtype(field)
-        if dtype is not None:
-            return dtype  # type: ignore
+def get_field_dtype(field: FieldSchema):
+    if isinstance(field, FieldSchema):
+        for adapter in _DTYPE_ADAPTERS:
+            dtype = adapter.get_dtype(field)
+            if dtype is not None:
+                return dtype  # type: ignore
 
-    # Fallback if we cannot convert this
-    return np.dtype(np.object_)
+        # Fallback if we cannot convert this
+        return np.dtype(np.object_)
+
+
+@lru_cache(maxsize=512)
+def get_trait_dtype(trait: TraitSchema):
+    fields = [(field.name, get_field_dtype(field)) for field in trait.fields]
+    return np.dtype(fields)
+
+
+@lru_cache(maxsize=512)
+def get_dtype(field_or_trait: FieldSchema | TraitSchema) -> np.dtype:
+    return (
+        get_field_dtype(field_or_trait)
+        if isinstance(field_or_trait, FieldSchema)
+        else get_trait_dtype(field_or_trait)
+    )
 
 
 register_adapter(AnnotatedArrayAdapter())

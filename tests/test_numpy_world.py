@@ -2,7 +2,7 @@
 import numpy as np
 
 from buds.base import Trait
-from buds.extras.numpy_archetype import Matrix2x2, NumpyArchetypeWorld
+from buds.extras.numpy.numpy_archetype import Matrix2x2, NumpyArchetypeWorld
 from tests.world_contract import Position, Velocity, WorldContract
 
 
