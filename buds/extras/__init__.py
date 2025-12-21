@@ -1,12 +1,7 @@
 import warnings
 
 try:
-    from .numpy.numpy_archetype import (
-        NumpyArchetypeWorld,
-        NumpyArrayMetaInfo,
-        Vector2,
-        Vector3,
-    )
+    from .numpy.numpy_archetype import NumpyArchetypeWorld
 except ImportError:
     warnings.warn("Could not import numpy archetype. Numpy is probably not installed")
 
