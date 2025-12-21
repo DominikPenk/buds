@@ -9,6 +9,42 @@ import buds
 import buds.inspect as inspect_mod
 
 
+@pytest.fixture(autouse=True)
+def reset_adapters():
+    """
+    Ensure adapter list is clean and deterministic for every test.
+    """
+    from buds.extras.numpy.dtypes import (
+        _DTYPE_ADAPTERS,
+        get_dtype,
+        get_field_dtype,
+        get_trait_dtype,
+        register_adapter,
+        AnnotatedArrayAdapter,
+        TupleAdapter,
+        NaiveNumpyAdapter,
+        PrimitiveAdapter
+    )
+
+    from buds.extras.numpy.
+
+    _DTYPE_ADAPTERS.clear()
+
+    # register adapters in intended order
+    register_adapter(AnnotatedArrayAdapter())
+    register_adapter(TupleAdapter())
+    register_adapter(NaiveNumpyAdapter())
+    register_adapter(PrimitiveAdapter())
+
+    get_trait_dtype.cache_clear()
+    get_dtype.cache_clear()
+    get_field_dtype.cache_clear()
+
+    yield
+
+    _DTYPE_ADAPTERS.clear()
+
+
 def test_fieldschema_default_adapter_simple_field():
     class T(buds.Trait):
         x: int

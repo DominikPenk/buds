@@ -2,7 +2,8 @@
 import numpy as np
 
 from buds.base import Trait
-from buds.extras.numpy.numpy_archetype import Matrix2x2, NumpyArchetypeWorld
+from buds.extras.numpy.dtypes import Matrix2x2
+from buds.extras.numpy.numpy_archetype import NumpyArchetypeWorld
 from tests.world_contract import Position, Velocity, WorldContract
 
 
@@ -94,9 +95,8 @@ class TestNumpyWorld(WorldContract):
         # Collect vectorized view and ensure data shape is preserved
         ents, (mat_view,) = world.get_vectorized_entities(Matrix)
         # For structured arrays the field for 'm' stores the shape metadata
-        field_dtype = mat_view._data.dtype.fields["m"][0]
-        shape = getattr(field_dtype, "shape", None)
-        assert shape == (2, 2)
+        shape = mat_view._data.dtype.fields["m"][0].shape
+        assert shape == (2, 2), f"Invalid shape {shape}"
 
         # Now remove many entities to trigger shrink
         ids = [e.id for e in ents]
@@ -105,8 +105,7 @@ class TestNumpyWorld(WorldContract):
 
         # New view should still report same field shape
         ents2, (mat_view2,) = world.get_vectorized_entities(Matrix)
-        field_dtype2 = mat_view2._data.dtype.fields["m"][0]
-        shape2 = getattr(field_dtype2, "shape", None)
+        shape2 = mat_view2._data.dtype.fields["m"][0].shape
         assert shape2 == (2, 2)
 
     def test_vectorized_query_masks_and_write_back(self):

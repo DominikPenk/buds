@@ -81,8 +81,9 @@ def test_numpy_dtype_for_object_fallback():
 
 
 # -----------------------------------------------------------------------------
-# _build_trait_dtype
+# dtype creation
 # -----------------------------------------------------------------------------
+from buds.extras.numpy.dtypes
 def test_build_trait_dtype_from_simple_trait(SimpleTrait):
     dtype = _build_trait_dtype(SimpleTrait)
     assert isinstance(dtype, np.dtype)

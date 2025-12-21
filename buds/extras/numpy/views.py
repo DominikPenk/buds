@@ -71,6 +71,9 @@ class ViewBuilder:
 
         return property(getter, setter)
 
+    def add_defaults(self) -> Self:
+        return self.add_slots().add_init().add_repr().add_properties()
+
     def build(self) -> type:
         return type(self.name, self.bases, self.namespace)
 
@@ -97,7 +100,7 @@ _VIEW_CACHE: dict[type, type] = {}
 
 def create_view_class(trait_type: type[Any]) -> type:
     if not is_trait_type(trait_type):
-        raise ValueError("trait_type is not a Trait class type")
+        raise TypeError("trait_type is not a Trait class type")
     if trait_type in _VIEW_CACHE:
         return _VIEW_CACHE[trait_type]
 
