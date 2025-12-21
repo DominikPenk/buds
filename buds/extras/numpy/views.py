@@ -71,9 +71,6 @@ class ViewBuilder:
 
         return property(getter, setter)
 
-    def add_defaults(self) -> Self:
-        return self.add_slots().add_init().add_repr().add_properties()
-
     def build(self) -> type:
         return type(self.name, self.bases, self.namespace)
 
@@ -84,7 +81,14 @@ class DataclassViewGenerator:
         if not is_dataclass(schema.type):
             return None
 
-        return ViewBuilder(schema, name).add_defaults().build()
+        return (
+            ViewBuilder(schema, name)
+            .add_slots()
+            .add_init()
+            .add_repr()
+            .add_properties()
+            .build()
+        )
 
 
 _VIEW_GENERATORS: list[tuple[int, ViewGeneratorAdapter]] = []
