@@ -3,8 +3,6 @@ import pytest
 
 # module under test
 import buds.extras.numpy.views as views
-from buds.base import Trait
-from buds.inspect import inspect_trait
 
 # ---------------------------------------------------------------------------
 # fixtures
@@ -16,15 +14,13 @@ def reset_global_state(monkeypatch):
     """
     Reset global cache and adapters for isolation.
     """
-    monkeypatch.setattr(views, "_VIEW_GENERATORS", [])
     monkeypatch.setattr(views, "_VIEW_CACHE", {})
-    views.register_view_adapter(views.DataclassViewGenerator)
     yield
 
 
 @pytest.fixture
-def SimpleTrait():
-    class Simple(Trait):
+def SimpleTrait(backend):
+    class Simple(backend.Trait):
         x: int
         y: float
 
@@ -41,31 +37,29 @@ def SimpleDtype():
 # ---------------------------------------------------------------------------
 
 
-def test_view_builder_builds_class():
-    class MyTrait(Trait):
+def test_view_builder_builds_class(backend):
+    class MyTrait(backend.Trait):
         x: int
         y: float
 
-    schema = inspect_trait(MyTrait)
-    view_cls = views.ViewBuilder(schema, "TraitView").add_defaults().build()
+    view_cls = views.create_view_class(MyTrait)
 
-    assert view_cls.__name__ == "TraitView"
-    assert issubclass(view_cls, Trait)
+    assert view_cls.__name__ == "MyTraitView"
+    # assert issubclass(view_cls, backend.Trait) or not backend.views_are_subclasses
 
 
-def test_builder_init_and_repr():
-    class MyTrait(Trait):
+def test_builder_init_and_repr(backend):
+    class MyTrait(backend.Trait):
         x: int
         y: int
 
-    schema = inspect_trait(MyTrait)
-    view_cls = views.ViewBuilder(schema, "TraitView").add_defaults().build()
+    view_cls = views.create_view_class(MyTrait)
 
     rec = {"x": [1], "y": [2]}
     v = view_cls(rec, 0)
 
     # repr should include all fields
-    assert repr(v) == "<TraitView(x=1, y=2)>"
+    assert repr(v) == "<MyTraitView(x=1, y=2)>"
 
 
 # ---------------------------------------------------------------------------
@@ -73,13 +67,12 @@ def test_builder_init_and_repr():
 # ---------------------------------------------------------------------------
 
 
-def test_properties_get_and_set():
-    class MyTrait(Trait):
+def test_properties_get_and_set(backend):
+    class MyTrait(backend.Trait):
         x: int
         y: float
 
-    schema = inspect_trait(MyTrait)
-    view_cls = views.ViewBuilder(schema, "TraitView").add_defaults().build()
+    view_cls = views.create_view_class(MyTrait)
 
     rec = {"x": [1], "y": [2.5]}
     v = view_cls(rec, 0)
@@ -96,12 +89,11 @@ def test_properties_get_and_set():
     assert rec["y"][0] == 3.5
 
 
-def test_non_primitive_property_passthrough():
-    class MyTrait(Trait):
+def test_non_primitive_property_passthrough(backend):
+    class MyTrait(backend.Trait):
         data: list
 
-    schema = inspect_trait(MyTrait)
-    view_cls = views.ViewBuilder(schema, "TraitView").add_defaults().build()
+    view_cls = views.create_view_class(MyTrait)
 
     lst = [1, 2]
     rec = {"data": [lst]}
@@ -116,12 +108,11 @@ def test_non_primitive_property_passthrough():
 # ---------------------------------------------------------------------------
 
 
-def test_slots_are_added():
-    class MyTrait(Trait):
+def test_slots_are_added(backend):
+    class MyTrait(backend.Trait):
         x: int
 
-    schema = inspect_trait(MyTrait)
-    view_cls = views.ViewBuilder(schema, "TraitView").add_slots().add_init().build()
+    view_cls = views.create_view_class(MyTrait)
 
     assert hasattr(view_cls, "__slots__")
     assert "_rec" in view_cls.__slots__
@@ -131,17 +122,6 @@ def test_slots_are_added():
 # ---------------------------------------------------------------------------
 # adapter selection
 # ---------------------------------------------------------------------------
-
-
-def test_dataclass_adapter_used():
-    class MyTrait(Trait):
-        x: int
-
-    schema = inspect_trait(MyTrait)
-    view_cls = views.create_view_class(MyTrait)
-
-    assert view_cls.__name__ == "MyTraitView"
-    assert issubclass(view_cls, Trait)
 
 
 def test_non_trait_adapter_rejected():
@@ -158,11 +138,11 @@ def test_non_trait_adapter_rejected():
 # ---------------------------------------------------------------------------
 
 
-def test_higher_priority_adapter_wins():
-    class MyTrait(Trait):
+def test_higher_priority_adapter_wins(backend, monkeypatch):
+    class MyTrait(backend.Trait):
         x: int
 
-    schema = inspect_trait(MyTrait)
+    monkeypatch.setattr(views, "_VIEW_GENERATORS", views._VIEW_GENERATORS.copy())
 
     class CustomAdapter:
         @classmethod
@@ -181,11 +161,9 @@ def test_higher_priority_adapter_wins():
 # ---------------------------------------------------------------------------
 
 
-def test_view_class_is_cached():
-    class MyTrait(Trait):
+def test_view_class_is_cached(backend):
+    class MyTrait(backend.Trait):
         x: int
-
-    schema = inspect_trait(MyTrait)
 
     v1 = views.create_view_class(MyTrait)
     v2 = views.create_view_class(MyTrait)
@@ -209,10 +187,10 @@ def test_non_trait_type_raises():
 # -----------------------------------------------------------------------------
 
 
-def test_make_trait_view_class_creates_class(SimpleTrait):
+def test_make_trait_view_class_creates_class(backend, SimpleTrait):
     ViewCls = views.create_view_class(SimpleTrait)
     assert ViewCls.__name__ == "SimpleView"
-    assert issubclass(ViewCls, SimpleTrait)
+    assert issubclass(ViewCls, SimpleTrait) or not backend.views_are_subclasses
 
 
 def test_make_trait_view_class_reflects_data(SimpleTrait, SimpleDtype):

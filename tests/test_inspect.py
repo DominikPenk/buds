@@ -9,44 +9,8 @@ import buds
 import buds.inspect as inspect_mod
 
 
-@pytest.fixture(autouse=True)
-def reset_adapters():
-    """
-    Ensure adapter list is clean and deterministic for every test.
-    """
-    from buds.extras.numpy.dtypes import (
-        _DTYPE_ADAPTERS,
-        get_dtype,
-        get_field_dtype,
-        get_trait_dtype,
-        register_adapter,
-        AnnotatedArrayAdapter,
-        TupleAdapter,
-        NaiveNumpyAdapter,
-        PrimitiveAdapter
-    )
-
-    from buds.extras.numpy.
-
-    _DTYPE_ADAPTERS.clear()
-
-    # register adapters in intended order
-    register_adapter(AnnotatedArrayAdapter())
-    register_adapter(TupleAdapter())
-    register_adapter(NaiveNumpyAdapter())
-    register_adapter(PrimitiveAdapter())
-
-    get_trait_dtype.cache_clear()
-    get_dtype.cache_clear()
-    get_field_dtype.cache_clear()
-
-    yield
-
-    _DTYPE_ADAPTERS.clear()
-
-
-def test_fieldschema_default_adapter_simple_field():
-    class T(buds.Trait):
+def test_fieldschema_default_adapter_simple_field(backend):
+    class T(backend.Trait):
         x: int
 
     schema = inspect_mod.TraitSchema.create(T)
@@ -62,8 +26,8 @@ def test_fieldschema_default_adapter_simple_field():
     assert f.spec.required
 
 
-def test_fieldschema_with_defaults():
-    class T(buds.Trait):
+def test_fieldschema_with_defaults(backend):
+    class T(backend.Trait):
         a: int = 3
         b: int = 5
 
@@ -77,9 +41,9 @@ def test_fieldschema_with_defaults():
     assert not fb.spec.required
 
 
-def test_fieldschema_with_default_factory():
-    class T(buds.Trait):
-        b: int = field(default_factory=lambda: 5)
+def test_fieldschema_with_default_factory(backend):
+    class T(backend.Trait):
+        b: int = backend.field(default_factory=lambda: 5)
 
     schema = inspect_mod.TraitSchema.create(T)
     fb = schema.fields[0]
@@ -87,10 +51,15 @@ def test_fieldschema_with_default_factory():
     assert not fb.spec.required
 
 
-def test_annotated_metadata_and_field_metadata():
+def test_annotated_metadata_and_field_metadata(backend: TraitBackend):
     # Use Annotated to pass arbitrary metadata and dataclasses.field.metadata
-    class T(buds.Trait):
-        x: Annotated[int, "meta1", 123] = field(default=1, metadata={"doc": "value"})
+    if not backend.has_meta:
+        pytest.skip(f"Backend {backend} does not support field metadata")
+
+    class T(backend.Trait):
+        x: Annotated[int, "meta1", 123] = backend.field(
+            default=1, metadata={"doc": "value"}
+        )
 
     schema = inspect_mod.TraitSchema.create(T)
     f = schema.fields[0]
@@ -98,8 +67,8 @@ def test_annotated_metadata_and_field_metadata():
     assert f.metadata.field["doc"] == "value"
 
 
-def test_classvar_is_ignored():
-    class T(buds.Trait):
+def test_classvar_is_ignored(backend: TraitBackend):
+    class T(backend.Trait):
         x: int
         y: ClassVar[int] = 1
 
@@ -108,11 +77,11 @@ def test_classvar_is_ignored():
     assert [f.name for f in schema.fields] == ["x"]
 
 
-def test_inspect_trait_accepts_instance_and_type():
-    class T(buds.Trait):
+def test_inspect_trait_accepts_instance_and_type(backend: TraitBackend):
+    class T(backend.Trait):
         x: int = 2
 
-    inst = T(5)
+    inst = T(x=5)
     s1 = inspect_mod.TraitSchema.create(T)
     s2 = inspect_mod.TraitSchema.create(type(inst))
     assert s1.type is T
@@ -132,44 +101,28 @@ def test_inspect_trait_errors_on_non_trait():
 
 def test_fieldschema_create_raises_when_no_adapter(monkeypatch):
     # Temporarily clear adapters and ensure ValueError is raised
-    original = inspect_mod.FieldSchema._adapters[:]  # type: ignore[attr-defined]
-    inspect_mod.FieldSchema._adapters.clear()
-    try:
-        with pytest.raises(ValueError):
-            inspect_mod.FieldSchema.create("name", int)
-    finally:
-        inspect_mod.FieldSchema._adapters[:] = original
+    monkeypatch.setattr(inspect_mod.FieldSchema, "_adapters", [])
+    with pytest.raises(ValueError):
+        inspect_mod.FieldSchema.create("name", int)
 
 
 def test_traitschema_create_raises_when_no_adapter(monkeypatch):
-    original = inspect_mod.TraitSchema._adapters[:]  # type: ignore[attr-defined]
-    inspect_mod.TraitSchema._adapters.clear()
-    try:
-        with pytest.raises(ValueError):
-            inspect_mod.TraitSchema.create(int)
-    finally:
-        inspect_mod.TraitSchema._adapters[:] = original
+    monkeypatch.setattr(inspect_mod.TraitSchema, "_adapters", [])
+    with pytest.raises(ValueError):
+        inspect_mod.TraitSchema.create(int)
 
 
-def test_default_field_adapter_uses_field_source():
+def test_default_field_adapter_uses_field_source(backend: TraitBackend):
+    if not backend.has_meta:
+        pytest.skip(f"Backend {backend.name} does not support metadata")
+
     # Ensure metadata from dataclasses.Field is picked up
-    class T(buds.Trait):
+    class T(backend.Trait):
         x: int = field(default=7, metadata={"a": 1})
 
     fs = inspect_mod.TraitSchema.create(T).fields[0]
     assert fs.metadata.field["a"] == 1
     assert fs.spec.default == 7
-
-
-def test_dataclass_trait_adapter_rejects_non_dataclass():
-    class RegularTrait(buds.Trait):
-        x: int
-
-    # Should not be considered applicable by DataclassTraitAdapter
-    adapter = inspect_mod.DataclassTraitAdapter()
-    # Subclassing buds.Trait automatically applies dataclass() in Trait.__init_subclass__
-    assert adapter.is_applicable(RegularTrait)
-    assert adapter.is_applicable(RegularTrait)
 
 
 def test_inspect_accepts_trait_instance_and_type():
@@ -202,5 +155,7 @@ def test_inspect_raises_on_non_trait_instance():
         pass
 
     instance = NotTrait()
+    with pytest.raises(ValueError, match="must be a trait or trait type"):
+        inspect_mod.inspect_trait(instance)
     with pytest.raises(ValueError, match="must be a trait or trait type"):
         inspect_mod.inspect_trait(instance)

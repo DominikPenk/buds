@@ -1,5 +1,5 @@
 from . import inspect
-from .trait import MSGSpecTrait
+from .trait import PydanticTrait
 
 try:
     import numpy as np
