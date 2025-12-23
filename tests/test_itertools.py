@@ -1,6 +1,6 @@
 import pytest
 
-from buds.base import Entity, Trait
+from buds.base import Entity, Trait, World
 from buds.itertools import (
     Query,
     _resolve_queries,
@@ -118,7 +118,7 @@ def test_resolve_query_argument_types_and_filtering(
 
         assert len(t_tuple) == len(traits_to_check)
         for t, expected_t_cls in zip(t_tuple, traits_to_check):
-            assert isinstance(t, expected_t_cls)
+            assert e.get_trait(expected_t_cls) == t
 
         # Check tags if expected
         if expected_tags:
@@ -165,27 +165,34 @@ def test_entity_product_returns_cartesian_pairs(world):
     # 1 player * 2 npcs = 2 results
     assert len(results) == 2
 
-    for ents, traits in results:
-        assert all(isinstance(e, Entity) for e in ents)
-        assert all(isinstance(t, Position) for t in traits)
+    for (e1, e2), (p1, p2) in results:
+        assert p1 == e1.get_trait(Position)
+        assert p2 == e2.get_trait(Position)
+        assert e1.has_tags("player")
+        assert e2.has_tags("npc")
 
 
-def test_entity_product_repeats(world):
+def test_entity_product_repeats(world: World):
     populated_world = populate_world(world)
     results = list(entity_product(populated_world, Position, Velocity, repeat=3))
 
     assert len(results) == 8  # 2 entities with both traits, 2^3 = 8 combinations
 
-    for ents, ((t1, v1), (t2, v2), (t3, v3)) in results:
-        assert all(isinstance(e, Entity) for e in ents)
+    valid_ids = [e.id for e, _ in world.get_entities(Position, Velocity)]
 
-        assert isinstance(t1, Position)
-        assert isinstance(t2, Position)
-        assert isinstance(t3, Position)
+    seen = set()
+    for ents, trait_groups in results:
+        assert len(ents) == 3
+        assert len(trait_groups) == 3
 
-        assert isinstance(v1, Velocity)
-        assert isinstance(v2, Velocity)
-        assert isinstance(v3, Velocity)
+        ids = tuple(e.id for e in ents)
+        seen.add(ids)
+
+        for entity, (pos, vel) in zip(ents, trait_groups):
+            assert entity.id in valid_ids
+            assert pos == entity.get_trait(Position)
+            assert vel == entity.get_trait(Velocity)
+    assert len(seen) == 8
 
 
 def test_entity_permutations_returns_expected_size(world):
@@ -235,13 +242,6 @@ def test_entity_starmap_applies_function(world):
     populated_world = populate_world(world)
 
     def func(entity, position: Position, velocity: Velocity):
-        assert isinstance(entity, Entity), f"Expected Entity, got {type(entity)}"
-        assert isinstance(position, Position), (
-            f"Expected Position, got {type(position)}"
-        )
-        assert isinstance(velocity, Velocity), (
-            f"Expected Velocity, got {type(velocity)}"
-        )
         return position.x + velocity.dx
 
     results = list(entity_starmap(populated_world, func, Position, Velocity))
@@ -258,25 +258,14 @@ def test_trait_product_cartesian(world):
     populated_world = populate_world(world)
     player_query = Query(Position, tags={"player"})
     npc_query = Query(Position, tags={"npc"})
-    results = list(trait_product(populated_world, player_query, npc_query))
-    assert all(len(p) == 2 for p in results)
-    for t1, t2 in results:
-        assert isinstance(t1, Position)
-        assert isinstance(t2, Position)
+    trait_results = list(trait_product(populated_world, player_query, npc_query))
+    entity_results = list(entity_product(populated_world, player_query, npc_query))
 
+    assert len(trait_results) == len(entity_results)
 
-def test_trait_product_repeats(world):
-    populated_world = populate_world(world)
-    results = list(trait_product(populated_world, Position, Velocity, repeat=3))
-    assert all(len(p) == 3 for p in results)
-    for (t1, v1), (t2, v2), (t3, v3) in results:
-        assert isinstance(t1, Position)
-        assert isinstance(t2, Position)
-        assert isinstance(t3, Position)
-
-        assert isinstance(v1, Velocity)
-        assert isinstance(v2, Velocity)
-        assert isinstance(v3, Velocity)
+    for (p1, p2), (_, (p3, p4)) in zip(trait_results, entity_results):
+        assert p1 == p3
+        assert p2 == p4
 
 
 def test_trait_permutations_expected_length(world):
@@ -314,8 +303,6 @@ def test_trait_starmap_applies_function(world):
     populated_world = populate_world(world)
 
     def func(t: Position, v: Velocity):
-        assert isinstance(t, Position), f"Expected Position, got {type(t)}"
-        assert isinstance(v, Velocity), f"Expected Velocity, got {type(v)}"
         return t.x + v.dx
 
     results = list(trait_starmap(populated_world, func, Position, Velocity))

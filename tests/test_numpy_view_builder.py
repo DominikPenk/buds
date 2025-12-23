@@ -206,6 +206,91 @@ def test_make_trait_view_class_reflects_data(SimpleTrait, SimpleDtype):
     assert data[1]["x"] == 7
 
 
+def test_compare_view_to_view_works(SimpleTrait, SimpleDtype):
+    ViewCls = views.create_view_class(SimpleTrait)
+    data = np.zeros(3, dtype=SimpleDtype)
+    data[1]["x"] = 42
+    data[1]["y"] = 3.14
+    view_1 = ViewCls(data, 1)
+    view_2 = ViewCls(data, 1)
+    view_3 = ViewCls(data, 2)
+    assert view_1 == view_2
+    assert view_1 != view_3
+
+
+def test_compare_view_to_trait_works(SimpleTrait, SimpleDtype):
+    ViewCls = views.create_view_class(SimpleTrait)
+    data = np.zeros(3, dtype=SimpleDtype)
+    data[1]["x"] = 42
+    data[1]["y"] = 3.14
+    view_1 = ViewCls(data, 1)
+    view_2 = ViewCls(data, 2)
+
+    trait = SimpleTrait(x=42, y=data[1]["y"])
+    assert view_1 == trait
+    assert view_2 != trait
+
+    assert trait == view_1
+    assert trait != view_2
+
+
+def test_make_trait_view_class_reflects_method(backend):
+    class TraitWithMethod(backend.Trait):
+        age: int
+
+        def greet(self) -> str:
+            return f"You are {self.age} years old"
+
+    dtype = np.dtype([("age", "<i4")])
+    ViewCls = views.create_view_class(TraitWithMethod)
+    data = np.empty(1, dtype=dtype)
+    data[0]["age"] = 42
+
+    view = ViewCls(data, 0)
+    msg = view.greet()
+    assert msg == "You are 42 years old"
+
+
+def test_make_trait_view_class_reflects_classmethod(backend):
+    class TraitWithClassMethod(backend.Trait):
+        age: int
+
+        @classmethod
+        def question(cls) -> str:
+            return f"How old are you (asked by: {cls.__name__})"
+
+    ViewCls = views.create_view_class(TraitWithClassMethod)
+
+    msg = ViewCls.question()
+    asking = (
+        ViewCls.__name__
+        if backend.views_are_subclasses
+        else TraitWithClassMethod.__name__
+    )
+    assert msg == f"How old are you (asked by: {asking})"
+
+
+def test_make_trait_view_class_reflects_classvariables(backend):
+    from typing import ClassVar
+
+    class TraitWithClassVariable(backend.Trait):
+        age: int
+        msg: ClassVar[str] = "Original message"
+
+    dtype = np.dtype([("age", "<i4")])
+    ViewCls = views.create_view_class(TraitWithClassVariable)
+    data = np.empty(1, dtype=dtype)
+    data[0]["age"] = 42
+
+    assert ViewCls.msg == TraitWithClassVariable.msg
+
+    TraitWithClassVariable.msg = "Updated msg"
+    assert ViewCls.msg == TraitWithClassVariable.msg
+
+    ViewCls.msg = "Modified by view"
+    assert ViewCls.msg == TraitWithClassVariable.msg
+
+
 # -----------------------------------------------------------------------------
 # reate_vectorized_view_class
 # -----------------------------------------------------------------------------

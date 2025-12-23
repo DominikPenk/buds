@@ -25,6 +25,8 @@ class PydanticStructViewGenerator:
             .add_init()
             .add_repr()
             .add_properties()
+            .add_dynamic_delegation()
+            .add_eq()
             .build()
         )
         return view_cls

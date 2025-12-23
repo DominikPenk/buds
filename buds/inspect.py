@@ -31,6 +31,7 @@ class FieldAdapter(Protocol):
 class TraitAdapter(Protocol):
     def is_applicable(self, trait_type: type[Any]) -> bool: ...
     def build_fields(self, trait_type: type[Any]) -> list[FieldSchema]: ...
+    def build_class_fields(self, trait_type: type[Any]) -> list[FieldSchema]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,19 +81,27 @@ class FieldSchema:
 
 
 class TraitSchema:
-    __slots__ = ("type", "fields")
+    __slots__ = ("type", "fields", "class_fields")
     _adapters: list[TraitAdapter] = []
 
-    def __init__(self, trait_type: type[Any], fields: list[FieldSchema]):
+    def __init__(
+        self,
+        trait_type: type[Any],
+        fields: list[FieldSchema],
+        class_fields: list[FieldSchema],
+    ):
         self.type = trait_type
         self.fields = fields
+        self.class_fields = class_fields
 
     @classmethod
     def create(cls, trait_type: type[Any]) -> TraitSchema:
         for adapter in cls._adapters:
             if adapter.is_applicable(trait_type):
                 return TraitSchema(
-                    trait_type=trait_type, fields=adapter.build_fields(trait_type)
+                    trait_type=trait_type,
+                    fields=adapter.build_fields(trait_type),
+                    class_fields=adapter.build_class_fields(trait_type),
                 )
         raise ValueError(f"No adapter available for type {trait_type.__name__}")
 
@@ -114,6 +123,14 @@ class DataclassTraitAdapter:
             FieldSchema.create(f.name, hints[f.name], f)
             for f in fields(trait_type)
             if get_origin(hints[f.name]) is not ClassVar
+        ]
+
+    def build_class_fields(self, trait_type: type[Any]) -> list[FieldSchema]:
+        hints = get_type_hints(trait_type, include_extras=True)
+        return [
+            FieldSchema.create(name, type_, None)
+            for name, type_ in hints.items()
+            if get_origin(type_) is ClassVar
         ]
 
 
@@ -163,6 +180,11 @@ def inspect_trait(trait_type_or_instance: type[Any] | Any) -> TraitSchema:
         return TraitSchema.create(type(trait_type_or_instance))
 
 
-TraitSchema.register_adapter(DataclassTraitAdapter())
+def reset_adapters():
+    TraitSchema._adapters.clear()
+    FieldSchema._adapters.clear()
+    TraitSchema.register_adapter(DataclassTraitAdapter())
+    FieldSchema.register_adapter(DefaultFieldAdapter())
 
-FieldSchema.register_adapter(DefaultFieldAdapter())
+
+reset_adapters()

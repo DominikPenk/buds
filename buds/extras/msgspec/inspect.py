@@ -20,6 +20,14 @@ class MSGStructTraitAdapter:
             if get_origin(hints[f.name]) is not ClassVar
         ]
 
+    def build_class_fields(self, trait_type: type[Any]) -> list[FieldSchema]:
+        hints = get_type_hints(trait_type, include_extras=True)
+        return [
+            FieldSchema.create(name, type_, None)
+            for name, type_ in hints.items()
+            if get_origin(type_) is ClassVar
+        ]
+
 
 class MSGFieldAdapter(DefaultFieldAdapter):
     def is_applicable(self, annotation: type[Any], source: Any) -> bool:

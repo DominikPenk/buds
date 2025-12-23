@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, ClassVar, get_origin, get_type_hints
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
@@ -13,6 +13,14 @@ class PydanticTraitAdapter:
     def build_fields(self, trait_type: BaseModel) -> list[FieldSchema]:
         fields: dict[str, FieldInfo] = trait_type.model_fields
         return [FieldSchema.create(name, f.annotation, f) for name, f in fields.items()]  # type: ignore
+
+    def build_class_fields(self, trait_type: type[Any]) -> list[FieldSchema]:
+        hints = get_type_hints(trait_type, include_extras=True)
+        return [
+            FieldSchema.create(name, type_, None)
+            for name, type_ in hints.items()
+            if get_origin(type_) is ClassVar
+        ]
 
 
 class PydanticFieldAdapter(DefaultFieldAdapter):

@@ -1,4 +1,6 @@
+import inspect
 from dataclasses import is_dataclass
+from functools import lru_cache
 from typing import Any, Generic, Optional, Protocol, Self, TypeVar
 
 import numpy as np
@@ -6,9 +8,17 @@ import numpy as np
 from ...base import Trait, is_trait_type
 from ...inspect import FieldSchema, TraitSchema
 
+T = TypeVar("T", bound=Trait)
+
+
 # ---------------------------------------------------------------------------
 # Single Trait Views
 # ---------------------------------------------------------------------------
+
+
+@lru_cache(maxsize=None)
+def resolve_class_attr(cls, name):
+    return inspect.getattr_static(cls, name)
 
 
 class ViewGeneratorAdapter(Protocol):
@@ -16,11 +26,35 @@ class ViewGeneratorAdapter(Protocol):
     def create_view(cls, schema: TraitSchema, name: str) -> Optional[type]: ...
 
 
+class ForwardMeta(type):
+    def __setattr__(cls, name, value):
+        attr = cls.__dict__.get(name)
+        if hasattr(attr, "__set__"):
+            attr.__set__(None, value)  # type: ignore
+        else:
+            super().__setattr__(name, value)
+
+
+class ClassVarForward:
+    def __init__(self, cls, name):
+        self._cls = cls  # original class
+        self._name = name  # name of the class variable
+
+    def __get__(self, instance, owner):
+        # always read from the original class
+        return getattr(self._cls, self._name)
+
+    def __set__(self, instance, value):
+        # always write to the original class
+        setattr(self._cls, self._name, value)
+
+
 class ViewBuilder:
     def __init__(self, schema: TraitSchema, name: str):
         self.schema = schema
         self.name = name
-        self.bases = (schema.type,)
+        self.bases = ()
+        self.slots = ("_rec", "_index")
         self.namespace: dict[str, Any] = {}
 
     def add_init(self) -> Self:
@@ -44,6 +78,7 @@ class ViewBuilder:
 
     def add_properties(self) -> Self:
         for field in self.schema.fields:
+            assert field.name not in self.namespace
             self.namespace[field.name] = self._make_property(field)
         return self
 
@@ -74,8 +109,65 @@ class ViewBuilder:
     def add_defaults(self) -> Self:
         return self.add_slots().add_init().add_repr().add_properties()
 
+    def add_eq(self) -> Self:
+        fields = self.schema.fields
+
+        def __eq__(self, other):
+            if other is self:
+                return True
+
+            try:
+                return all(
+                    getattr(self, field.name) == getattr(other, field.name, None)
+                    for field in fields
+                )
+            except AttributeError:
+                return NotImplemented
+
+        self.namespace["__eq__"] = __eq__
+        return self
+
+    def make_subclass(self) -> Self:
+        self.bases = (self.schema.type,)
+        return self
+
+    def add_dynamic_delegation(self) -> Self:
+        cls = self.schema.type
+
+        def __getattr__(self, name: str) -> Any:
+            attr = resolve_class_attr(cls, name)
+
+            if isinstance(attr, classmethod):
+                return attr.__func__.__get__(cls, cls)
+
+            if isinstance(attr, staticmethod):
+                return attr.__func__
+
+            if not callable(attr):
+                return attr
+
+            return attr.__get__(self, type(self))
+
+        self.namespace["__getattr__"] = __getattr__
+
+        # Forward class methods
+        for name, attr in cls.__dict__.items():
+            if name.startswith("__"):
+                continue
+            if not isinstance(attr, classmethod):
+                continue
+            self.namespace[name] = getattr(cls, name).__get__(cls, cls)
+
+        # Forward class variables
+        for field in self.schema.class_fields:
+            # Actually create a class varaible that can be used
+            assert field.name not in self.namespace
+            self.namespace[field.name] = ClassVarForward(cls, field.name)
+
+        return self
+
     def build(self) -> type:
-        return type(self.name, self.bases, self.namespace)
+        return ForwardMeta(self.name, self.bases, self.namespace)
 
 
 class DataclassViewGenerator:
@@ -90,6 +182,8 @@ class DataclassViewGenerator:
             .add_init()
             .add_repr()
             .add_properties()
+            .add_dynamic_delegation()
+            .add_eq()
             .build()
         )
 
@@ -126,7 +220,6 @@ register_view_adapter(DataclassViewGenerator)
 # ---------------------------------------------------------------------------
 # Vectorized Trait Views
 # ---------------------------------------------------------------------------
-T = TypeVar("T", bound=Trait)
 
 
 class VectorizedTraitView(Generic[T]):

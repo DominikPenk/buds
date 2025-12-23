@@ -29,7 +29,7 @@ class TraitBackend:
         Trait: type[Any],
         field: Callable,
         has_meta: bool,
-        views_are_subclasses: bool = True,
+        views_are_subclasses: bool = False,
     ):
         self.Trait = Trait
         self.field = field
@@ -54,7 +54,6 @@ try:
             Trait=msgspec_impl.MSGSpecTrait,
             field=msgspec.field,
             has_meta=False,
-            views_are_subclasses=False,
         )
     )
 except ImportError:
@@ -70,7 +69,6 @@ try:
             Trait=PydanticTrait,
             field=pydantic.Field,
             has_meta=False,
-            views_are_subclasses=False,
         )
     )
 except ImportError:
@@ -90,6 +88,7 @@ def clear_caches():
         dtypes.get_field_dtype.cache_clear()
         dtypes.get_trait_dtype.cache_clear()
         dtypes.get_dtype.cache_clear()
+        views.resolve_class_attr.cache_clear()
         views._VIEW_CACHE.clear()
         views._VECTORIZED_TRAIT_VIEW_CACHE.clear()
 

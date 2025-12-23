@@ -86,45 +86,65 @@ class WorldContract:
     # Query return types
     # ---------------------------------------------------------------------------
     def test_get_entities_returns_instances_for_single_trait_query(self):
-        self.world.create_entity(Position(0, 0))
-        self.world.create_entity(Position(1, 1))
-        self.world.create_entity(Position(2, 2))
+        p1, p2, p3 = Position(0, 0), Position(1, 1), Position(2, 2)
+        e1 = self.world.create_entity(p1)
+        e2 = self.world.create_entity(p2)
+        e3 = self.world.create_entity(p3)
+
+        expected_results = {e1.id: p1, e2.id: p2, e3.id: p3}
+
         result = list(self.world.get_entities(Position))
-        for answer in result:
-            assert isinstance(answer, tuple)
-            assert isinstance(answer[0], Entity)
-            assert isinstance(answer[1], Position)
+        for e, t in result:
+            assert isinstance(e, Entity)
+            assert expected_results[e.id] == t
 
     def test_get_entities_returns_tuple_of_instances_for_mulit_trait_query(self):
-        self.world.create_entity(Position(0, 0), Velocity(1, 1))
-        self.world.create_entity(Position(1, 1), Velocity(1, 1))
-        self.world.create_entity(Position(2, 2), Velocity(1, 1))
+        p1, p2, p3 = Position(0, 0), Position(1, 1), Position(2, 2)
+        v1, v2, v3 = Velocity(3, 3), Velocity(4, 4), Velocity(5, 5)
+
+        e1 = self.world.create_entity(p1, v1)
+        e2 = self.world.create_entity(p2, v2)
+        e3 = self.world.create_entity(p3, v3)
         result = list(self.world.get_entities(Position, Velocity))
-        for answer in result:
-            assert isinstance(answer, tuple)
-            assert isinstance(answer[0], Entity)
-            assert isinstance(answer[1], tuple)
-            assert len(answer[1]) == 2
-            assert isinstance(answer[1][0], Position)
-            assert isinstance(answer[1][1], Velocity)
+
+        expected_results = {
+            e1.id: (p1, v1),
+            e2.id: (p2, v2),
+            e3.id: (p3, v3),
+        }
+
+        for e, (p, v) in result:
+            assert isinstance(e, Entity)
+            expected_p, expected_v = expected_results[e.id]
+            assert p == expected_p
+            assert v == expected_v
 
     def test_get_traits_returns_instances_for_single_trait_query(self):
-        self.world.create_entity(Position(0, 0))
-        self.world.create_entity(Position(1, 1))
-        self.world.create_entity(Position(2, 2))
+        all_traits = [Position(0, 0), Position(1, 1), Position(2, 2)]
+        self.world.create_entity(all_traits[0])
+        self.world.create_entity(all_traits[1])
+        self.world.create_entity(all_traits[2])
+
+        seen: list[Trait] = []
         result = list(self.world.get_traits(Position))
-        for answer in result:
-            assert isinstance(answer, Position)
+        for t in result:
+            assert not any(t == s for s in seen)
+            assert any(t == a for a in all_traits)
+            seen.append(t)
 
     def test_get_traits_returns_tuple_of_instances_for_mulit_trait_query(self):
-        self.world.create_entity(Position(0, 0), Velocity(1, 1))
-        self.world.create_entity(Position(1, 1), Velocity(1, 1))
-        self.world.create_entity(Position(2, 2), Velocity(1, 1))
+        all_pos = [Position(0, 0), Position(1, 1), Position(2, 2)]
+        all_vel = [Velocity(3, 3), Velocity(4, 4), Velocity(5, 5)]
+        self.world.create_entity(all_pos[0], all_vel[0])
+        self.world.create_entity(all_pos[1], all_vel[1])
+        self.world.create_entity(all_pos[2], all_vel[2])
+
+        seen: list[tuple[Trait, Trait]] = []
         result = list(self.world.get_traits(Position, Velocity))
-        for answer in result:
-            assert isinstance(answer, tuple)
-            assert isinstance(answer[0], Position)
-            assert isinstance(answer[1], Velocity)
+        for p, v in result:
+            assert not any((p == sp) and (v == sv) for sp, sv in seen)
+            assert any((p == ap) and (v == av) for ap, av in zip(all_pos, all_vel))
+            seen.append((p, v))
 
     # ---------------------------------------------------------------------------
     # Entity reusage
