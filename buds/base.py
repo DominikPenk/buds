@@ -36,6 +36,7 @@ __all__ = [
     "Entity",
     "is_trait",
     "is_trait_type",
+    "mark_as_trait",
     "World",
     "Trait",
     "EntityNotFoundError",
@@ -99,6 +100,10 @@ def is_trait_type(cls: type) -> bool:
 
 
 def register_trait_base_class(cls: type[Any]):
+    setattr(cls, TRAIT_HINT, True)
+
+
+def mark_as_trait(cls: type):
     setattr(cls, TRAIT_HINT, True)
 
 

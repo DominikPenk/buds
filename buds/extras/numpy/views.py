@@ -5,7 +5,7 @@ from typing import Any, Generic, Optional, Protocol, Self, TypeVar
 
 import numpy as np
 
-from ...base import Trait, is_trait_type
+from ...base import Trait, is_trait_type, mark_as_trait
 from ...inspect import FieldSchema, TraitSchema
 
 T = TypeVar("T", bound=Trait)
@@ -204,6 +204,7 @@ def create_view_class(trait_type: type[Any]) -> type:
     for _, adapter in _VIEW_GENERATORS:
         view_cls = adapter.create_view(schema, name)
         if view_cls is not None:
+            mark_as_trait(view_cls)
             _VIEW_CACHE[trait_type] = view_cls
             return view_cls
 

@@ -1,8 +1,10 @@
 import numpy as np
 import pytest
 
-# module under test
 import buds.extras.numpy.views as views
+
+# module under test
+from buds import is_trait, is_trait_type
 
 # ---------------------------------------------------------------------------
 # fixtures
@@ -37,7 +39,7 @@ def SimpleDtype():
 # ---------------------------------------------------------------------------
 
 
-def test_view_builder_builds_class(backend):
+def test_view_builder_builds_trait_class(backend):
     class MyTrait(backend.Trait):
         x: int
         y: float
@@ -45,7 +47,7 @@ def test_view_builder_builds_class(backend):
     view_cls = views.create_view_class(MyTrait)
 
     assert view_cls.__name__ == "MyTraitView"
-    # assert issubclass(view_cls, backend.Trait) or not backend.views_are_subclasses
+    assert is_trait_type(view_cls)
 
 
 def test_builder_init_and_repr(backend):
@@ -60,6 +62,19 @@ def test_builder_init_and_repr(backend):
 
     # repr should include all fields
     assert repr(v) == "<MyTraitView(x=1, y=2)>"
+
+
+def test_view_instance_is_trait(backend):
+    class MyTrait(backend.Trait):
+        x: int
+        y: int
+
+    view_cls = views.create_view_class(MyTrait)
+
+    rec = {"x": [1], "y": [2]}
+    v = view_cls(rec, 0)
+
+    assert is_trait(v)
 
 
 # ---------------------------------------------------------------------------
