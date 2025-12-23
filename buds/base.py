@@ -175,6 +175,20 @@ class World(abc.ABC):
         """
 
     @abc.abstractmethod
+    def get_trait(self, entity: int, trait_type: type[_Trait]) -> _Trait:
+        """Retreives a specific trait type from an entity
+
+        Args:
+            entity: The target entity ID.
+            trait_type: The type of the trait to remove.
+
+        Raises:
+            EntityNotFoundError: If the entity ID does not exist.
+            TraitNotFoundError: If the entity does not have the specified trait type.
+            TypeError: If the trait is not a valid trait instance (not decorated by [`@trait`][buds.base.trait]).
+        """
+
+    @abc.abstractmethod
     def has_trait(self, entity: int, trait_type: type[_Trait]) -> bool:
         """Checks whether an entity has a given trait type.
 
@@ -476,6 +490,22 @@ class Entity:
         """
         assert self.world is not None, "Cannot add trait to dead entity"
         return self.world.has_trait(self.id, trait_type)
+
+    def get_trait(self, trait_type: type[_Trait]) -> _Trait:
+        """Get the trait associated with this entity.
+
+        Args:
+            trait_type: The trait type to check.
+
+        Returns:
+            A trait instance.
+
+        Raises:
+            EntityNotFoundError: Inherited from [`World.has_tags`][buds.base.World.has_tags].
+            TypeError: Inherited from [`World.has_tags`][buds.base.World.has_tags].
+        """
+        assert self.world is not None, "Cannot add trait to dead entity"
+        return self.world.get_trait(self.id, trait_type)
 
     def add_tags(self, *tags: str) -> Entity:
         """Adds tags to the entity.

@@ -52,6 +52,23 @@ class WorldContract:
         self.world.add_trait(e.id, pos)
         assert self.world.has_trait(e.id, Position)
 
+    def test_get_trait(self):
+        e = self.world.create_entity()
+        pos = Position(1, 2)
+
+        with pytest.raises(TypeError):
+            self.world.get_trait(e.id, str)
+
+        with pytest.raises(EntityNotFoundError):
+            self.world.get_trait(e.id + 1, Position)
+
+        with pytest.raises(TraitNotFoundError):
+            self.world.get_trait(e.id, Position)
+
+        self.world.add_trait(e.id, pos)
+
+        assert pos == self.world.get_trait(e.id, Position)
+
     def test_remove_trait(self):
         e = self.world.create_entity(Position(5, 5))
         self.world.remove_trait(e.id, Position)

@@ -19,13 +19,14 @@ from typing import TypeVar
 from .base import (
     Entity,
     EntityNotFoundError,
+    Trait,
     TraitNotFoundError,
     World,
     is_trait,
     is_trait_type,
 )
 
-T = TypeVar("T")
+T = TypeVar("T", bound=Trait)
 
 __all__ = ["SparseWorld"]
 
@@ -129,6 +130,31 @@ class SparseWorld(World):
                 f"Entity {entity} does not have trait of type {trait_type}"
             )
         del self._trait_stores[trait_type][entity]
+
+    def get_trait(self, entity: int, trait_type: type[T]) -> T:
+        """Retreives a specific trait type from an entity
+
+        Args:
+            entity: The target entity ID.
+            trait_type: The type of the trait to remove.
+
+        Raises:
+            EntityNotFoundError: If the entity ID does not exist.
+            TraitNotFoundError: If the entity does not have the specified trait type.
+            TypeError: If the trait is not a valid trait instance (not decorated by [`@trait`][buds.base.trait]).
+        """
+        if not is_trait_type(trait_type):
+            raise TypeError(
+                f"Attempted to remove non-trait type {trait_type} from Entity {entity}. "
+                f"All traits must be decorated with @trait."
+            )
+        if not self.is_alive(entity):
+            raise EntityNotFoundError(entity)
+        if entity not in self._trait_stores[trait_type]:
+            raise TraitNotFoundError(
+                f"Entity {entity} does not have trait of type {trait_type}"
+            )
+        return self._trait_stores[trait_type][entity]
 
     def has_trait(self, entity: int, trait_type: type[T]) -> bool:
         """Checks whether an entity has a given trait type.

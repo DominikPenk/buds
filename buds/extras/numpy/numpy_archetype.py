@@ -158,6 +158,10 @@ class NumpyArcheType(ArcheType):
         for t in self.trait_data:
             self.trait_data[t][:n] = self.trait_data[t][order]
 
+    def get_trait(self, index: int, trait_type: type[T]) -> T:
+        store = self.trait_data[trait_type]
+        return create_view_class(trait_type)(store, index)
+
     @property
     def capacity(self) -> int:
         return self._capacity

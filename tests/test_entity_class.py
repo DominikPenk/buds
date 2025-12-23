@@ -1,6 +1,6 @@
 import pytest
 
-from buds.base import Entity, Trait
+from buds.base import Entity, Trait, TraitNotFoundError
 
 
 class DummyWorld:
@@ -97,6 +97,11 @@ class TestTrait(Trait):
     pass
 
 
+class Position(Trait):
+    x: int
+    y: int
+
+
 def test_add_and_remove_trait(world):
     e: Entity = world.create_entity()
     e.add_trait(TestTrait())
@@ -109,6 +114,21 @@ def test_add_and_remove_trait(world):
 def test_has_trait(world):
     e: Entity = world.create_entity(TestTrait())
     assert e.has_trait(TestTrait)
+
+
+def test_get_trait(world):
+    e: Entity = world.create_entity()
+    pos = Position(1, 2)
+
+    with pytest.raises(TypeError):
+        e.get_trait(str)
+
+    with pytest.raises(TraitNotFoundError):
+        e.get_trait(Position)
+
+    e.add_trait(pos)
+
+    assert pos == e.get_trait(Position)
 
 
 def test_add_and_remove_tags(world):
