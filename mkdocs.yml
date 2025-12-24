@@ -7,7 +7,9 @@ theme:
 
 nav:
   - Home: index.md
-  - Tutorial: tutorial.md
+  - Tutorials: 
+    - Getting Started: tutorials/start.md
+    - Custom Trait Base: tutorials/custom_trait.md
   - API:
       - Core: api/base.md
       - System: api/system.md

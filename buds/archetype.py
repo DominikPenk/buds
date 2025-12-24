@@ -310,7 +310,7 @@ class ArchetypeWorld(World):
         Raises:
             EntityNotFoundError: If the entity ID does not exist.
             TraitNotFoundError: If the entity does not have the specified trait type.
-            TypeError: If the trait is not a valid trait instance (not decorated by [`@trait`][buds.base.trait]).
+            TypeError: If the trait is not a valid trait instance.
         """
         if not is_trait_type(trait_type):
             raise TypeError(

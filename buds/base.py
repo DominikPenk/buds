@@ -162,7 +162,7 @@ class World(abc.ABC):
 
         Raises:
             EntityNotFoundError: If the entity ID does not exist.
-            TypeError: If the trait is not a valid trait instance (not decorated by [`@trait`][buds.base.trait]).
+            TypeError: If the trait is not a valid trait instance.
         """
 
     @abc.abstractmethod
@@ -176,7 +176,7 @@ class World(abc.ABC):
         Raises:
             EntityNotFoundError: If the entity ID does not exist.
             TraitNotFoundError: If the entity does not have the specified trait type.
-            TypeError: If the trait is not a valid trait instance (not decorated by [`@trait`][buds.base.trait]).
+            TypeError: If the trait is not a valid trait instance.
         """
 
     @abc.abstractmethod
@@ -190,7 +190,7 @@ class World(abc.ABC):
         Raises:
             EntityNotFoundError: If the entity ID does not exist.
             TraitNotFoundError: If the entity does not have the specified trait type.
-            TypeError: If the trait is not a valid trait instance (not decorated by [`@trait`][buds.base.trait]).
+            TypeError: If the trait is not a valid trait instance.
         """
 
     @abc.abstractmethod
@@ -206,7 +206,7 @@ class World(abc.ABC):
 
         Raises:
             EntityNotFoundError: If the entity ID does not exist.
-            TypeError: If the trait is not a valid trait instance (not decorated by [`@trait`][buds.base.trait]).
+            TypeError: If the trait is not a valid trait instance.
         """
 
     def add_tags(self, entity: int, *tags: str) -> None:
