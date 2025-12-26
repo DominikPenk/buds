@@ -39,7 +39,7 @@ T = TypeVar("T", bound=Trait)
 
 
 @lru_cache(maxsize=None)
-def resolve_class_attr(cls, name):
+def resolve_class_attr(cls: type[Any], name: str):
     """Resolve a class attribute without triggering descriptor logic.
 
     This function uses ``inspect.getattr_static`` to retrieve attributes

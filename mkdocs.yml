@@ -14,12 +14,15 @@ nav:
       - Core: api/base.md
       - System: api/system.md
       - Itertools: api/itertools.md
+      - Inspect: api/inspect.md
       - Seeds: api/seeds.md
       - World Implementations:
         - Archetypes: api/worlds/archetypes.md
         - Sparse: api/worlds/sparse.md
       - Extras:
-        - numpy: api/extras/numpy.md
+        - Numpy: api/extras/numpy.md
+        - Pydantic: api/extras/pydantic.md 
+        - MsgSpec: api/extras/msgspec.md
 plugins:
   - search
   - mkdocstrings
